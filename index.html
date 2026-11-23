@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#111">
+<link rel="icon" href="data:,">
+<title>Escultor · Maniquí guía</title>
+<style>
+  :root { --bg:#111; --panel:#1c1c1e; --txt:#f2f2f2; --muted:#a0a0a8; --acc:#4fc3f7; --ok:#3ddc84; --warn:#ffca28; --bad:#ff5252; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family: system-ui, -apple-system, Roboto, sans-serif; overflow:hidden; }
+  #stage { position:fixed; left:0; right:0; top:0; bottom:var(--barH, 132px); background:#000; touch-action:none; }
+  #cv { width:100%; height:100%; display:block; }
+  #refLayer { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  #refLayer.edit { pointer-events:auto; outline:3px dashed var(--acc); outline-offset:-3px; }
+  #refImg { position:absolute; left:50%; top:50%; max-width:none; transform-origin:0 0; user-select:none; -webkit-user-drag:none; }
+  #status { position:absolute; left:8px; right:8px; top:8px; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+  .pill { align-self:flex-start; background:rgba(0,0,0,.72); padding:5px 10px; border-radius:12px; font-size:14px; line-height:1.3; max-width:100%; white-space:pre-line; }
+  .pill.warn { color:var(--warn); } .pill.bad { color:var(--bad); } .pill.ok { color:var(--ok); }
+  #bar { position:fixed; left:0; right:0; bottom:0; height:var(--barH, 132px); background:var(--panel); display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; padding:8px; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+  #bar button { background:#2c2c2e; color:var(--txt); border:0; border-radius:12px; font-size:13px; font-weight:600; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; padding:2px; }
+  #bar button .i { font-size:22px; line-height:1; }
+  #bar button.on { background:var(--acc); color:#000; }
+  .sheet { position:fixed; left:0; right:0; bottom:0; max-height:78%; background:var(--panel); border-radius:18px 18px 0 0; padding:14px 16px 24px; overflow:auto; transform:translateY(105%); transition:transform .25s; z-index:10; box-shadow:0 -8px 30px rgba(0,0,0,.6); }
+  .sheet.open { transform:none; }
+  .sheet h2 { margin:4px 0 12px; font-size:20px; display:flex; justify-content:space-between; align-items:center; }
+  .sheet h2 button { background:#3a3a3c; color:var(--txt); border:0; border-radius:10px; font-size:18px; padding:6px 14px; }
+  .row { margin:12px 0; }
+  .row > label { display:block; color:var(--muted); font-size:15px; margin-bottom:6px; }
+  .seg { display:flex; flex-wrap:wrap; gap:6px; }
+  .seg button { flex:1 1 auto; background:#2c2c2e; color:var(--txt); border:2px solid transparent; border-radius:10px; padding:10px 8px; font-size:15px; }
+  .seg button.on { border-color:var(--acc); background:#173545; }
+  input[type=number] { width:100%; font-size:20px; padding:10px; border-radius:10px; border:0; background:#2c2c2e; color:var(--txt); }
+  input[type=range] { width:100%; }
+  .big { width:100%; font-size:17px; padding:14px; border-radius:12px; border:0; background:var(--acc); color:#000; font-weight:700; margin:6px 0; }
+  .big.sec { background:#2c2c2e; color:var(--txt); }
+  .note { color:var(--muted); font-size:15px; line-height:1.45; }
+  table { width:100%; border-collapse:collapse; font-size:15px; }
+  td, th { padding:8px 4px; border-bottom:1px solid #333; text-align:left; vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  td.num { text-align:right; white-space:nowrap; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  details summary { cursor:pointer; }
+  details p { margin:6px 0 2px; color:var(--muted); font-size:14px; }
+  #hidden { display:none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="refLayer"><img id="refImg" alt=""></div>
+  <div id="status"></div>
+</div>
+
+<div id="bar">
+  <button id="bCam"><span class="i">📷</span>Cámara</button>
+  <button id="bFoto"><span class="i">🖼️</span>Foto</button>
+  <button id="bFreeze"><span class="i">⏸️</span>Congelar</button>
+  <button id="bMode"><span class="i">🤖</span>Auto</button>
+  <button id="bGhost" class="on"><span class="i">🧍</span>Maniquí</button>
+  <button id="bMed"><span class="i">📋</span>Medidas</button>
+  <button id="bMirror"><span class="i">↔️</span>Espejo</button>
+  <button id="bPlumb"><span class="i">📐</span>Plomada</button>
+  <button id="bContrast"><span class="i">◐</span>Contraste</button>
+  <button id="bVoice"><span class="i">🔊</span>Voz</button>
+  <button id="bCalco"><span class="i">🗺️</span>Calco</button>
+  <button id="bSet"><span class="i">⚙️</span>Figura</button>
+</div>
+
+<!-- Ajustes de la figura -->
+<div class="sheet" id="sSet">
+  <h2>Figura a esculpir <button data-close>✕</button></h2>
+  <div class="row"><label>Edad / canon</label><div class="seg" id="optEdad"></div></div>
+  <div class="row"><label>Sexo</label><div class="seg" id="optSexo">
+    <button data-v="hombre">Hombre</button><button data-v="mujer">Mujer</button></div></div>
+  <div class="row"><label>Complexión</label><div class="seg" id="optComp">
+    <button data-v="delgada">Delgada</button><button data-v="media">Media</button><button data-v="robusta">Robusta</button></div></div>
+  <div class="row"><label>Altura final de la escultura (cm, como si estuviera de pie)</label>
+    <input type="number" id="inAltura" min="1" step="0.5" inputmode="decimal"></div>
+  <p class="note" id="notaFigura"></p>
+</div>
+
+<!-- Medidas -->
+<div class="sheet" id="sMed">
+  <h2>Medidas y correcciones <button data-close>✕</button></h2>
+  <div id="medResumen" class="note"></div>
+  <table id="medTabla"></table>
+  <p class="note">Las medidas en cm son las <b>reales</b> de cada parte: valen en cualquier pose. Compruébalas directamente sobre el barro con compás o calibre: es lo más fiable. Los lados (izq./der.) son <b>los de la figura</b>, no los tuyos.</p>
+</div>
+
+<!-- Calco -->
+<div class="sheet" id="sCalco">
+  <h2>Calco (imagen de referencia) <button data-close>✕</button></h2>
+  <button class="big" id="bRefLoad">Elegir imagen de referencia</button>
+  <div class="row"><label>Opacidad</label><input type="range" id="refOp" min="0" max="1" step="0.05" value="0.5"></div>
+  <div class="row seg"><button id="bRefLock">🔓 Mover imagen</button><button id="bRefReset">Centrar</button><button id="bRefHide">Ocultar</button></div>
+  <p class="note">Con <b>Mover imagen</b> activo: un dedo arrastra, dos dedos agrandan y giran. Pulsa otra vez para bloquearla: queda fija y puedes seguir trabajando.</p>
+</div>
+
+<div id="hidden">
+  <input type="file" id="fFoto" accept="image/*">
+  <input type="file" id="fRef" accept="image/*">
+  <video id="vid" playsinline muted></video>
+</div>
+
+<script src="canon.js"></script>
+<script src="mp/pose.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
