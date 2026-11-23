@@ -22,7 +22,7 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 ## Modos
 | Modo | Qué revisa |
 |---|---|
-| **Cuerpo** | Maniquí con el canon en la misma pose de tu pieza (con escorzo). Largo de cada parte en cm, hombros y caderas, contrapposto |
+| **Cuerpo** | Maniquí con el canon en la misma pose de tu pieza (con escorzo). Largo de cada parte en cm, hombros y caderas, contrapposto y **grosor de brazos** (bíceps, codo, antebrazo, muñeca) |
 | **Torso** | Clavículas, pezones, pecho, cintura, ombligo y caderas, distintos en hombre y mujer. De perfil, alturas; de frente, simetría de los pechos. Ajusta las guías al giro y la inclinación del tronco. Puede poner sola una **referencia parecida** encima, alineada |
 | **Rostro** | Eje central, tercios, **distancia entre ojos**, simetría y tamaño de los ojos, nariz, boca, inclinación de la cabeza y **orejas** (entre cejas y base de la nariz) |
 | **Manos** | Largo de cada dedo frente al medio, dedo medio frente a palma, **ancho de la palma** y flexión de cada dedo |
@@ -36,7 +36,7 @@ Las vistas **Frente / Lado der. / Lado izq. / Espalda** guardan cada una su imag
 - **Bolivia y los Andes:** Chachapuma (Tiwanaku), Hombre cóndor, Ukuku, Amaru, Diablo/Supay de la Diablada de Oruro, Ekeko, Yaguareté-abá, Anchanchu, Tío de la mina, Pachamama, Jichi, Achachila.
 - **Clásicos:** centauro, sirena/tritón, minotauro, sátiro, arpía, esfinge, pegaso, grifo.
 
-Cada criatura trae una nota cultural, consejos para la **unión** entre sus partes y proporciones medidas en "cabezas" del propio animal. *Las proporciones de las criaturas mitológicas son orientativas: no existe un canon oficial. Para un estilo concreto, usa tus propias referencias.*
+Cada criatura trae una nota cultural, consejos para la **unión** entre sus partes y proporciones medidas en "cabezas" del propio animal. En los cuadrúpedos también se mide el **grosor** del antebrazo, las cañas, la pierna trasera y el cuello. *Las proporciones de las criaturas mitológicas son orientativas: no existe un canon oficial. Para un estilo concreto, usa tus propias referencias.*
 
 ---
 
@@ -48,6 +48,7 @@ Cada criatura trae una nota cultural, consejos para la **unión** entre sus part
 - **Espejo, Plomada** (vertical real, contrapposto y equilibrio), **Contraste**.
 - **⟷ Espejo de simetría:** refleja una mitad sobre la otra y marca en rojo lo que no coincide.
 - **Calcar:** imagen de referencia sobre la cámara (opacidad, mover, girar, **🎯 Alinear** a hombros y caderas). **◑ Comparar silueta:** en rojo lo que sobra y en azul lo que falta.
+- **💇 Cabello según la pose:** lee la energía de la pose (inclinación, contrapposto, brazos, piernas, hacia dónde mira) y sugiere un peinado en armonía —recogido, cayendo con la gravedad o al viento— y dibuja su dirección y el volumen máximo recomendado.
 - **🦴 Anatomía:** esqueleto y músculos sobre la pose; toca uno para saber qué es y cómo modelarlo.
 - **🔄 Vuelta completa:** 8 vistas en la torneta y comparación de siluetas opuestas.
 - **📐 Ampliar desde maqueta:** factor y conversor de medidas.
@@ -64,6 +65,8 @@ Cada criatura trae una nota cultural, consejos para la **unión** entre sus part
 - **Referencias parecidas:** la app revisa tus imágenes y cada página de tus PDF y te sugiere las más parecidas a la pose, el rostro o la mano que ve la cámara.
 
 ---
+
+Los **grosores** (brazos, piernas, tronco, patas) tienen valores de referencia para adultos (hombre y mujer, por complexión), **niños y bebés** (orientativos: varían mucho con la grasa) y cada animal.
 
 ## Límites a saber
 - Los detectores se entrenaron con **personas**: con barro sin terminar o piezas muy estilizadas pueden fallar. Usa puntos manuales (✋), bordes ajustables o el compás.

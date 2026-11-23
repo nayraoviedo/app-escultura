@@ -148,6 +148,10 @@
   Object.assign(ESP.sirena, { unionTxt: 'Haz la transición a escamas en las caderas, con una línea curva y no recta; el vientre continúa en el lado de abajo de la cola.' });
   Object.assign(ESP.minotauro, { unionTxt: 'El cuello del toro se ensancha y se funde con el trapecio humano: sin cuello fino entre ambos.' });
   Object.assign(ESP.satiro, { unionTxt: 'Las caderas son humanas y los muslos ya son de cabra: la transición va en la parte alta del muslo, a menudo cubierta de pelo.' });
+  // grosores orientativos (en largos de cabeza del animal), vista de lado
+  const GROSOR = { caballo: { ant: .33, cana: .18, gas: .37, canaT: .20, cue: .67 }, perro: { ant: .27, cana: .18, gas: .36, canaT: .18, cue: .55 }, gato: { ant: .33, cana: .22, gas: .39, canaT: .22, cue: .55 }, toro: { ant: .40, cana: .22, gas: .45, canaT: .22, cue: 1.0 }, leon: { ant: .46, cana: .31, gas: .50, canaT: .30, cue: .90 }, llama: { ant: .30, cana: .17, gas: .37, canaT: .17, cue: .43 }, puma: { ant: .40, cana: .27, gas: .50, canaT: .27, cue: .55 } };
+  Object.assign(GROSOR, { centauro: GROSOR.caballo, pegaso: GROSOR.caballo, grifo: GROSOR.leon, esfinge: GROSOR.leon });
+  const G_SEG = [['ant', 'Antebrazo (pata delantera)', 'codo', 'rodD', 'Músculo grueso arriba, que se afina hacia la rodilla (el carpo).'], ['cana', 'Caña delantera', 'rodD', 'pataD', 'Hueso casi sin músculo: delgada y plana de frente, con tendones marcados por detrás.'], ['gas', 'Pierna trasera (gaskin)', 'babilla', 'corvejon', 'Masa musculosa que se estrecha bruscamente hacia el corvejón.'], ['canaT', 'Caña trasera', 'corvejon', 'pataT', 'Un poco más larga y gruesa que la delantera.'], ['cue', 'Cuello (a la mitad)', 'nuca', 'cruz', 'El cuello es más ancho en la base; vista de lado se mide de la crin a la garganta.']];
   let especie = ls.get('escultorEspecie', 'caballo');
 
   // pestaña Animales
@@ -204,6 +208,19 @@
       if (!p[a] || !p[b]) continue;
       const d = tipo === 'v' ? Math.abs(p[b].y - p[a].y) : dist(p[a], p[b]), r = d / u / can, dd = Math.abs(r - 1);
       if (dd > 0.12) out.push({ id: 'an:' + nom, parte: nom, texto: `Mide ${f1(d / u)} cabezas y el canon de ${sp.nombre.toLowerCase()} pide ≈ ${f1(can)}. ${r > 1 ? 'Es demasiado largo' : 'Es demasiado corto'} (${Math.round(dd * 100)}%).`, st: dd > 0.25 ? 'bad' : 'warn', at: mid(p[a], p[b]), tip });
+    }
+    // grosores de patas y cuello
+    const tg = GROSOR[especie], MM = MO._M;
+    if (tg) {
+      MM.anchos = [];
+      for (const [key, nom, a, b, tip] of G_SEG) {
+        if (!p[a] || !p[b] || !tg[key]) continue;
+        const d = { x: p[b].x - p[a].x, y: p[b].y - p[a].y }, L = Math.hypot(d.x, d.y) || 1, dir = { x: -d.y / L, y: d.x / L }, c = { x: p[a].x + d.x * .45, y: p[a].y + d.y * .45 };
+        const ideal = tg[key] * u, r = MO.medir('ag' + key, c, dir, ideal); if (!r || r.tope) continue;
+        const q = r.w / ideal, st = Math.abs(q - 1) > 0.4 ? 'bad' : Math.abs(q - 1) > 0.25 ? 'warn' : 'ok';
+        MM.anchos.push({ A: r.A, B: r.B, t: f1(r.w / u) + ' cab.', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano' });
+        if (st !== 'ok') out.push({ id: 'ag:' + key, parte: 'Grosor: ' + nom, texto: `Mide ≈ ${f1(r.w / u)} cabezas de grueso; lo habitual en ${sp.nombre.toLowerCase()} es ≈ ${f1(tg[key])}. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} un ${Math.round(Math.abs(q - 1) * 100)}% (si el borde está mal, arrastra sus extremos).`, st, at: c, tip });
+      }
     }
     if (sp.union && sp.unionTxt) out.push({ id: 'an:union', parte: 'La unión', texto: sp.unionTxt, st: 'info', at: p.hOmb || p.cad || p[sp.cab[1]], tip: 'Un híbrido convence cuando las dos anatomías comparten los mismos ejes de peso y equilibrio: comprueba la plomada.' });
     return out;

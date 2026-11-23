@@ -30,7 +30,7 @@
     S.modo = m; ls.set('escultorModo', m);
     S.focus = null; M.sel = null; M.live = null; M.liveKey = null; M.sigList = ''; M.sug = []; M.anchos = []; M.hist = {};
     document.querySelectorAll('#modos button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-    E.setSeg(m === 'piernas' || m === 'torso');
+    E.setSeg(m === 'piernas' || m === 'torso' || m === 'cuerpo');
     if (m === 'rostro' || m === 'manos') B() && B().sol(m === 'rostro' ? 'face' : 'hand').catch(() => {});
     else if (S.mode === 'auto') { E.ensurePose(); if (S.src === 'foto' || S.frozen) E.detectStill(); }
     pintarMini(); botones();
@@ -156,6 +156,9 @@
     }
     return { A: add(c, mul(dir, -a)), B: add(c, mul(dir, b)), w: a + b, tope: false, fuente, id, c, dir, a, b };
   }
+  // grosores orientativos para bebés y niños (en cabezas; mucha variación por la grasa)
+  const GROSOR_NINOS = { bebe: { bra: 0.34, cod: 0.30, ant: 0.31, mun: 0.25, mus: 0.62, mid: 0.55, rod: 0.42, pan: 0.42, tob: 0.30 }, nino: { bra: 0.29, cod: 0.24, ant: 0.26, mun: 0.20, mus: 0.53, mid: 0.45, rod: 0.34, pan: 0.37, tob: 0.24 } };
+  const quienCanon = () => S.edad === 'bebe' ? 'bebé (aprox.)' : S.edad === 'nino' ? 'niño/a (aprox.)' : `${fem() ? 'mujer' : 'hombre'} (${S.comp})`;
   const adultoT = () => S.edad === 'teen' || String(S.edad).startsWith('adulto');
   const kComp = () => ({ delgada: 0.9, media: 1, robusta: 1.12 }[S.comp] || 1);
 
@@ -359,12 +362,40 @@
     if (!out.length) out.push({ id: 'p:info', parte: 'Piernas y pies', texto: 'Piernas y pies dentro del canon desde esta vista. Revisa también de perfil: el pie se mide mejor de lado.', st: 'info', at: A.M.anL || A.M.midHip, tip: TIPS_P.ankle + ' ' + TIPS_P.foot });
     return out;
   }
+  // grosor de brazos (bíceps, codo, antebrazo, muñeca) por silueta + contraste
+  function anchosBrazos(A) {
+    if (!silueta() && !cuadro()) return [];
+    const F = fem(), kc = kComp(), u = A.u, cm = (S.altura / A.C.H) / u, nk = GROSOR_NINOS[S.edad], tk = nk ? 1.4 : 1;
+    const W = nk ? { bra: nk.bra, cod: nk.cod, ant: nk.ant, mun: nk.mun } : F ? { bra: 0.36, cod: 0.28, ant: 0.32, mun: 0.22 } : { bra: 0.42, cod: 0.33, ant: 0.38, mun: 0.25 };
+    const NOM = { bra: 'Brazo (bíceps)', cod: 'Codo', ant: 'Antebrazo', mun: 'Muñeca' };
+    const TIP = { bra: 'El brazo es más ancho visto de lado que de frente; el deltoides termina en punta a media altura del húmero, entre bíceps y tríceps.', cod: 'En el codo, el epicóndilo interno sobresale más que el externo; con el brazo estirado se forma un hoyuelo detrás.', ant: 'El antebrazo es ancho y carnoso en su tercio superior (los músculos del codo) y se afina en tendones hacia la muñeca; de frente su forma cambia al girar la palma.', mun: 'La muñeca es más ancha que gruesa; el cúbito marca un saliente en el lado del meñique.' };
+    const out = [], medidas = {}; let pegado = false;
+    for (const [s, e, w, lado] of [['shL', 'elL', 'wrL', 'izq'], ['shR', 'elR', 'wrR', 'der']]) {
+      const Sh = A.M[s], El = A.M[e], Wr = A.M[w]; if (!Sh || !El || !Wr) continue;
+      const d1 = norm(sub(El, Sh)), d2 = norm(sub(Wr, El)), p1 = P(-d1.y, d1.x), p2 = P(-d2.y, d2.x), pc = norm(P(-(d1.y + d2.y), d1.x + d2.x));
+      const pts = { bra: [add(Sh, mul(sub(El, Sh), 0.55)), p1], cod: [El, pc], mun: [add(El, mul(sub(Wr, El), 0.92)), p2] };
+      for (const [key, [c, dir]] of Object.entries(pts)) { const r = medir('b' + key + lado, c, dir, W[key] * kc * u); if (!r) continue; if (r.tope) { pegado = true; continue; } medidas[key + lado] = { r, c }; }
+      const sl = silueta(); let best = null;
+      if (sl) for (let t = 0.12; t <= 0.42; t += 0.05) { const c = add(El, mul(sub(Wr, El), t)), r = ancho(sl, c, p2, W.ant * kc * u * 0.95); if (r && !r.tope && (!best || r.w > best.w)) best = { w: r.w, c }; }
+      const cA = best ? best.c : add(El, mul(sub(Wr, El), 0.25)), ra = medir('bant' + lado, cA, p2, W.ant * kc * u);
+      if (ra && !ra.tope) medidas['ant' + lado] = { r: ra, c: cA }; else if (ra && ra.tope) pegado = true;
+    }
+    for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
+      const md = medidas[key + lado]; if (!md) continue;
+      const fino = key === 'mun', ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > (fino ? 0.4 : 0.3) * tk ? 'bad' : Math.abs(q - 1) > (fino ? 0.25 : 0.18) * tk ? 'warn' : 'ok';
+      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano' });
+      if (st !== 'ok') out.push({ id: 'sb:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${quienCanon()} pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
+    }
+    for (const key of Object.keys(W)) { const a = medidas[key + 'izq'], b = medidas[key + 'der']; if (!a || !b) continue; const dd = Math.abs(a.r.w - b.r.w) / Math.max(a.r.w, b.r.w); if (dd > 0.12) out.push({ id: 'sb:sim' + key, parte: NOM[key], texto: `${a.r.w > b.r.w ? 'El izquierdo' : 'El derecho'} es ${f1(Math.abs(a.r.w - b.r.w) * cm)} cm más grueso que el otro. Si los dos brazos están igual de tensos, iguálalos.`, st: 'warn', at: a.r.w > b.r.w ? a.c : b.c, tip: 'Un brazo que hace fuerza (sostiene peso, se dobla) muestra el bíceps más abultado: la diferencia puede ser correcta.' }); }
+    if (nk && Object.keys(medidas).length) out.push({ id: 'sb:ninos', parte: 'Brazos de ' + (S.edad === 'bebe' ? 'bebé' : 'niño/a'), texto: S.edad === 'bebe' ? 'En el bebé los brazos son cilindros blandos con pliegues en la muñeca y el codo: casi no se marcan articulaciones ni músculos.' : 'En el niño los brazos son delgados y poco marcados; el codo y la muñeca apenas se notan.', st: 'info', at: A.M.elL || A.M.midSh, tip: 'Los grosores de niños son orientativos: cambian mucho con la edad y la grasa.' });
+    if (pegado) out.push({ id: 'sb:pegado', parte: 'Grosor de brazos', texto: 'Algún brazo toca el tronco o la otra parte del cuerpo: ahí no mido el grosor. Mide con 🧭 compás o mira desde otra vista.', st: 'info', at: A.M.elL || A.M.midSh, tip: 'Con el compás de puntas curvas puedes medir el grosor real del brazo aunque esté pegado al cuerpo.' });
+    return out;
+  }
   function anchosPiernas(A) {
     M.anchos = [];
     if (!silueta() && !cuadro()) return [];
-    if (!adultoT()) return [{ id: 's:pninos', parte: 'Grosor de piernas', texto: 'En bebés y niños el grosor depende mucho de la grasa: no hay un canon fiable. Compara las dos piernas entre sí.', st: 'info', at: A.M.knL || A.M.midHip, tip: 'En los niños, las rodillas y los tobillos casi no se marcan; los muslos son cónicos y blandos.' }];
-    const F = fem(), kc = kComp(), u = A.u, cmCab = S.altura / A.C.H, cm = cmCab / u;
-    const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
+    const F = fem(), kc = kComp(), u = A.u, cmCab = S.altura / A.C.H, cm = cmCab / u, nk = GROSOR_NINOS[S.edad], tk = nk ? 1.4 : 1;
+    const W = nk ? { mus: nk.mus, mid: nk.mid, rod: nk.rod, pan: nk.pan, tob: nk.tob } : F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
     const NOM = { mus: 'Muslo (arriba)', mid: 'Muslo (mitad)', rod: 'Rodilla', pan: 'Pantorrilla', tob: 'Tobillo' };
     const TIP = { mus: 'El muslo es más ancho arriba y se afina hacia la rodilla; por fuera, el contorno es más alto y suave; por dentro, el vasto interno abulta justo encima de la rodilla.', mid: 'A media altura del muslo, el contorno exterior es casi recto y el interior más curvo.', rod: 'La rodilla es la parte más estrecha entre muslo y pantorrilla; de frente se ve casi cuadrada.', pan: 'El gemelo interno es más bajo y más abultado; el externo, más alto y plano: el punto más ancho de la pantorrilla está en el primer tercio bajo la rodilla.', tob: 'El tobillo es lo más estrecho de la pierna; el maléolo interno sobresale más arriba que el externo.' };
     const out = [], medidas = {}; let juntas = false;
@@ -383,15 +414,16 @@
     }
     for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
       const md = medidas[key + lado]; if (!md) continue;
-      const ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.18 ? 'warn' : 'ok';
+      const ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > 0.3 * tk ? 'bad' : Math.abs(q - 1) > 0.18 * tk ? 'warn' : 'ok';
       M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano' });
-      if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido ${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'en la imagen; si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
+      if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${quienCanon()} pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido ${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'en la imagen; si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
     }
     for (const key of Object.keys(W)) {
       const a = medidas[key + 'izq'], b = medidas[key + 'der']; if (!a || !b) continue;
       const dd = Math.abs(a.r.w - b.r.w) / Math.max(a.r.w, b.r.w);
       if (dd > 0.12) out.push({ id: 's:sim' + key, parte: NOM[key], texto: `${a.r.w > b.r.w ? 'El izquierdo' : 'El derecho'} es ${f1(Math.abs(a.r.w - b.r.w) * cm)} cm más grueso que el otro. Iguálalos si las dos piernas cargan igual.`, st: 'warn', at: a.r.w > b.r.w ? a.c : b.c, tip: 'La pierna que carga el peso tiene los músculos más tensos y marcados, pero el grosor es casi el mismo.' });
     }
+    if (nk && Object.keys(medidas).length) out.push({ id: 's:ninos', parte: 'Piernas de ' + (S.edad === 'bebe' ? 'bebé' : 'niño/a'), texto: S.edad === 'bebe' ? 'Piernas cortas, gorditas y algo arqueadas, con pliegues de grasa en muslos y tobillos; rodillas sin marcar.' : 'Piernas delgadas y rectas; rodillas y tobillos poco marcados, muslos cónicos.', st: 'info', at: A.M.knL || A.M.midHip, tip: 'Los grosores de niños son orientativos: cambian mucho con la edad y la grasa.' });
     if (juntas) out.push({ id: 's:juntas', parte: 'Grosor de piernas', texto: 'Las piernas se tocan en algunas zonas y la silueta se une: ahí no mido el grosor. Mira de perfil o separa visualmente con otra vista.', st: 'info', at: A.M.midHip, tip: 'Con compás puedes medir el grosor de cada pierna en la pieza real a cualquier altura.' });
     return out;
   }
@@ -554,6 +586,7 @@
     F = null;
     if (S.modo === 'torso' && A) dibTorso(A);
     if (S.modo === 'piernas' && A) dibPiernas(A);
+    if ((S.modo === 'cuerpo' && A) || S.modo === 'animal') dibAnchos();
     if (S.modo === 'rostro' && M.live && M.live.kind === 'face') { const lm = M.live.r && M.live.r.multiFaceLandmarks && M.live.r.multiFaceLandmarks[0]; if (lm) { F = geoRostro(lm); dibRostro(F); } }
     if (S.modo === 'manos' && M.live && M.live.kind === 'hand') dibManos(M.live.r);
     dibReglas();
@@ -570,7 +603,7 @@
     if (now - lastCorr < 350) return; lastCorr = now;
     let list = [];
     if (has) {
-      if (S.modo === 'cuerpo' && A) list = corrCuerpo(A);
+      if (S.modo === 'cuerpo' && A) { M.anchos = []; list = corrCuerpo(A).concat(anchosBrazos(A)); }
       else if (S.modo === 'torso' && A) list = corrTorso(A);
       else if (S.modo === 'piernas' && A) list = corrPiernas(A);
       else if (S.modo === 'rostro') list = F ? corrRostro(F) : [];
@@ -870,13 +903,13 @@
     const C = E.canonActual(), F = fem(), kc = kComp(), a = adultoT();
     const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
     const L = {
-      cuerpo: [['alt', 'Altura total (de pie)', 'del punto más alto del cráneo al suelo', C.H], ['cab', 'Cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['hom', 'Ancho de hombros', 'de borde a borde exterior de los hombros', (F ? 1.75 : 2) * kc], ['ua', 'Brazo', 'del hombro (acromion) al codo', C.ua], ['fa', 'Antebrazo', 'del codo a la muñeca', C.fa], ['mano', 'Mano', 'de la muñeca a la punta del dedo medio', C.hand], ['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta del dedo más largo', C.foot]],
+      cuerpo: [['alt', 'Altura total (de pie)', 'del punto más alto del cráneo al suelo', C.H], ['cab', 'Cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['hom', 'Ancho de hombros', 'de borde a borde exterior de los hombros', (F ? 1.75 : 2) * kc], ['ua', 'Brazo', 'del hombro (acromion) al codo', C.ua], ['fa', 'Antebrazo', 'del codo a la muñeca', C.fa], ['mano', 'Mano', 'de la muñeca a la punta del dedo medio', C.hand], ['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta del dedo más largo', C.foot]].concat(a || GROSOR_NINOS[S.edad] ? [['gbra', 'Grosor del brazo', 'de lado a lado, a mitad del bíceps', (F ? 0.36 : 0.42) * kc], ['gcod', 'Grosor del codo', 'de lado a lado', (F ? 0.28 : 0.33) * kc], ['gant', 'Grosor del antebrazo', 'en su parte más ancha, bajo el codo', (F ? 0.32 : 0.38) * kc], ['gmun', 'Grosor de la muñeca', 'de lado a lado', (F ? 0.22 : 0.25) * kc]] : []),
       torso: [['pecho', 'Ancho del pecho', 'de lado a lado, a la altura de los pezones', (F ? 1.3 : 1.45) * kc], ['cint', 'Ancho de cintura', 'en la parte más estrecha', (F ? 1.05 : 1.25) * kc], ['cad', 'Ancho de caderas', 'en la parte más ancha (trocánteres)', (F ? 1.6 : 1.45) * kc], ['cuepez', 'Hueco del cuello → pezones', 'en vertical', F ? 0.8 : 0.67], ['pezpez', 'Entre pezones', 'de pezón a pezón', F ? 0.94 : 1], ['pezomb', 'Pezones → ombligo', 'en vertical', F ? 0.9 : 1], ['ombpub', 'Ombligo → pubis', 'en vertical', 1]],
       piernas: [['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta', C.foot]].concat(a ? [['gmus', 'Grosor muslo (arriba)', 'de lado a lado, bajo la ingle', W.mus * kc], ['gmid', 'Grosor muslo (mitad)', 'de lado a lado', W.mid * kc], ['grod', 'Grosor rodilla', 'de lado a lado', W.rod * kc], ['gpan', 'Grosor pantorrilla', 'en su parte más ancha', W.pan * kc], ['gtob', 'Grosor tobillo', 'sobre los maléolos', W.tob * kc]] : []),
       rostro: [['rcab', 'Alto de la cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['ranc', 'Ancho de la cabeza', 'de sien a sien (sobre las orejas)', 0.7], ['rter', 'Cada tercio de la cara', 'p. ej. de las cejas a la base de la nariz', 0.27], ['rojo', 'Ancho de un ojo', 'del lagrimal a la comisura externa', 0.13], ['rio', 'Entre ojos', 'de lagrimal a lagrimal', 0.13], ['rnar', 'Ancho de la nariz', 'de ala a ala', 0.15], ['rboc', 'Ancho de la boca', 'de comisura a comisura', 0.22], ['rore', 'Alto de la oreja', 'del borde superior al lóbulo', 0.27]],
       manos: [['mlar', 'Largo de la mano', 'de la muñeca a la punta del dedo medio', C.hand], ['mpal', 'Largo de la palma', 'de la muñeca al nudillo del dedo medio', C.hand * 0.57], ['manc', 'Ancho de la palma', 'de borde a borde, en los nudillos', (F ? 0.34 : 0.37) * kc], ['mmed', 'Dedo medio', 'del nudillo a la punta', C.hand * 0.43]],
     };
-    const ancho = ['hom', 'pecho', 'cint', 'cad', 'gmus', 'gmid', 'grod', 'gpan', 'gtob', 'ranc', 'rnar', 'rboc', 'manc'];
+    const ancho = ['gbra', 'gcod', 'gant', 'gmun', 'hom', 'pecho', 'cint', 'cad', 'gmus', 'gmid', 'grod', 'gpan', 'gtob', 'ranc', 'rnar', 'rboc', 'manc'];
     return (L[S.modo] || []).map(([k, lab, como, cab]) => ({ k, lab, como, cm: cab * S.altura / C.H, ancho: ancho.includes(k) }));
   }
   const keyCompas = () => M.proyecto + '|' + S.modo;
