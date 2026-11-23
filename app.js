@@ -181,7 +181,7 @@
   }
   async function detectFrame() {
     if (S.busy || !S.poseReady || S.mode !== 'auto' || S.src !== 'cam' || S.frozen || vid.readyState < 2) return;
-    if (S.modo === 'rostro' || S.modo === 'manos') return;
+    if (S.modo === 'rostro' || S.modo === 'manos' || S.modo === 'animal') return;
     S.busy = true;
     try { if (S.stillSent) { S.pose.reset(); S.stillSent = false; } await S.pose.send({ image: vid }); } catch (e) { console.error(e); }
     S.busy = false;
@@ -350,10 +350,10 @@
 
   // ---------- Dibujo ----------
   const COL = { ok: '#3ddc84', warn: '#ffca28', bad: '#ff5252', gray: '#9e9e9e', base: '#4fc3f7' };
-  function line(a, b, w, c, dash) { ctx.beginPath(); ctx.setLineDash(dash || []); ctx.lineWidth = w; ctx.strokeStyle = c; ctx.lineCap = 'round'; ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]); }
-  function circle(p, r, fill, stroke) { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.lineWidth = 3; ctx.strokeStyle = stroke; ctx.stroke(); } }
+  function line(a, b, w, c, dash) { ctx.beginPath(); ctx.setLineDash(dash || []); ctx.lineWidth = w * (S.lw || 1); ctx.strokeStyle = c; ctx.lineCap = 'round'; ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]); }
+  function circle(p, r, fill, stroke) { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.lineWidth = 3 * (S.lw || 1); ctx.strokeStyle = stroke; ctx.stroke(); } }
   function label(p, txt, c) {
-    ctx.font = '600 15px system-ui, sans-serif'; const w = ctx.measureText(txt).width;
+    ctx.font = '600 ' + (S.lw > 1 ? 20 : 15) + 'px system-ui, sans-serif'; const w = ctx.measureText(txt).width;
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p.x + 8, p.y - 11, w + 10, 22);
     ctx.fillStyle = c || '#fff'; ctx.fillText(txt, p.x + 13, p.y + 5);
   }
@@ -953,7 +953,9 @@
     try { S.pose.reset(); S.stillSent = true; await S.pose.send({ image: img }); } catch (e) { console.error(e); }
     S.route = null; S.busy = false; S.sm = {};
     const r = S.libRes; S.libRes = null;
-    return r && r.poseLandmarks ? { lm: r.poseLandmarks, world: r.poseWorldLandmarks } : null;
+    let mask = null;
+    if (r && r.segmentationMask) { try { const W = img.width || img.naturalWidth, H = img.height || img.naturalHeight; mask = document.createElement('canvas'); mask.width = W; mask.height = H; mask.getContext('2d').drawImage(r.segmentationMask, 0, 0, W, H); } catch (e) { mask = null; } }
+    return r && r.poseLandmarks ? { lm: r.poseLandmarks, world: r.poseWorldLandmarks, mask } : null;
   }
   function useProportions(img) { RE.img = img; RE.pts = null; reOpen(); reDetect(); }
   window.Escultor = { detectPoseOn, setCalco, useProportions, canon: canonActual, flash, IDX, closeSheets: () => document.querySelectorAll('.sheet').forEach(x => x.classList.remove('open')) };

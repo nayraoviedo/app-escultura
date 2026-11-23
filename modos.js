@@ -19,12 +19,12 @@
   const v3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }), L3 = (v) => Math.hypot(v.x, v.y, v.z), L2 = (v) => Math.hypot(v.x, v.y);
   const m3 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
   const W3 = () => (S.mode === 'auto' && S.world && S.world.length > 30) ? S.world : null;
-  const M = { hist: {}, clay: ls.get('escultorBarro', null), pickClay: false, regla: false, reglaP: null, edgeDrag: null, anchos: [], autoRef: ls.get('escultorAutoRef', true), autoId: null, corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
+  const M = { capas: [], prov: [], ptr: [], ptrAct: null, hist: {}, clay: ls.get('escultorBarro', null), pickClay: false, regla: false, reglaP: null, edgeDrag: null, anchos: [], autoRef: ls.get('escultorAutoRef', true), autoId: null, corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
   S.modo = ls.get('escultorModo', 'cuerpo');
   if (S.modo === 'biblio') S.modo = 'cuerpo';
 
   // ======================= Modos =======================
-  const MODOS = { cuerpo: 'Cuerpo', torso: 'Torso', rostro: 'Rostro', manos: 'Manos', piernas: 'Piernas y pies' };
+  const MODOS = { cuerpo: 'Cuerpo', torso: 'Torso', rostro: 'Rostro', manos: 'Manos', piernas: 'Piernas y pies', animal: 'Animales e híbridos' };
   function setModo(m) {
     if (m === 'biblio') { B() && B().abrir('buscar'); return; }
     S.modo = m; ls.set('escultorModo', m);
@@ -557,6 +557,7 @@
     if (S.modo === 'rostro' && M.live && M.live.kind === 'face') { const lm = M.live.r && M.live.r.multiFaceLandmarks && M.live.r.multiFaceLandmarks[0]; if (lm) { F = geoRostro(lm); dibRostro(F); } }
     if (S.modo === 'manos' && M.live && M.live.kind === 'hand') dibManos(M.live.r);
     dibReglas();
+    for (const f of M.capas) { try { f(A); } catch (e) { console.error(e); } }
     // pulso sobre la corrección seleccionada (los modos que no son cuerpo)
     const c = M.corr.find(x => x.id === M.sel);
     if (c && c.at && !c.seg) { const t = performance.now() / 1000, q = E.toScr(c.at); E.circle(q, 18 + 5 * Math.sin(t * 5), 'rgba(124,92,255,.2)', '#a78bfa'); E.circle(q, 4, '#fff'); }
@@ -575,6 +576,7 @@
       else if (S.modo === 'rostro') list = F ? corrRostro(F) : [];
       else if (S.modo === 'manos') list = M.live && M.live.kind === 'hand' ? corrManos(M.live.r) : [];
     }
+    for (const f of M.prov) { try { list = list.concat(f(A, has) || []); } catch (e) { console.error(e); } }
     list = list.concat(corrCompas());
     M.corr = list.filter(c => !M.done.has(S.view + '|' + c.id));
     if (M.sel && !M.corr.find(c => c.id === M.sel)) { M.sel = null; S.focus = null; }
@@ -660,6 +662,7 @@
   // ======================= Consejo =======================
   let conTexto = '';
   const GENERAL = {
+    animal: 'En los animales y los híbridos, mide todo en largos de cabeza del propio animal. En un híbrido, la clave es la unión: que la transición entre las dos anatomías sea creíble.',
     cuerpo: 'Mira la escultura desde lejos y con los ojos entrecerrados: así ves las masas y la proporción general antes que los detalles.',
     torso: 'Construye el tórax como una caja ovalada y la pelvis como otra; el abdomen las une. La línea de los hombros y la de las caderas casi nunca son paralelas en una pose viva.',
     rostro: 'Empieza por el eje central y la línea de los ojos: todo lo demás se mide desde ahí. Las orejas van entre las cejas y la base de la nariz.',
@@ -760,6 +763,7 @@
     return null;
   }
   function pointerdown(e, q) {
+    for (const f of M.ptr) if (f.down && f.down(e, q)) { M.ptrAct = f; try { e.target.setPointerCapture(e.pointerId); } catch (er) {} return true; }
     if (M.pickClay) {
       const fr = cuadro(), c = E.toImg(q); M.pickClay = false;
       if (fr) { const s = [0, 0, 0]; let n = 0; for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) { const px = pixel(fr, add(c, P(dx / fr.k, dy / fr.k))); if (px) { s[0] += px[0]; s[1] += px[1]; s[2] += px[2]; n++; } } if (n) { M.clay = s.map(v => Math.round(v / n)); ls.set('escultorBarro', M.clay); M.hist = {}; E.flash([[`🎨 Color del barro guardado (rgb ${M.clay.join(', ')}). Ahora los bordes se buscan contra este color.`, 'ok']], 5000); } }
@@ -783,9 +787,10 @@
     M.drag = best; e.target.setPointerCapture(e.pointerId); return true;
   }
   function pointermove(e, q) {
+    if (M.ptrAct) { M.ptrAct.move && M.ptrAct.move(e, q); return true; }
     if (M.edgeDrag) { const d = M.edgeDrag, t = dot(sub(E.toImg(q), d.c), d.dir), ed = vstate().edges[d.id]; if (d.lado === 'a') ed.a = Math.max(1, -t); else ed.b = Math.max(1, t); M.sigList = ''; lastCorr = 0; return true; }
     if (!M.drag) return false; const pe = puntosEditables(); if (!pe) return false; pe[0][M.drag] = E.toImg(q); vstate()[pe[2]] = true; M.sigList = ''; return true; }
-  function pointerup() { M.drag = null; if (M.edgeDrag) { M.edgeDrag = null; lastCorr = 0; } }
+  function pointerup() { if (M.ptrAct) { M.ptrAct.up && M.ptrAct.up(); M.ptrAct = null; } M.drag = null; if (M.edgeDrag) { M.edgeDrag = null; lastCorr = 0; } }
 
   // ======================= Figura en miniatura =======================
   function pintarMini() {
@@ -995,6 +1000,10 @@
   })();
 
   pintarProyectos(); setModo(S.modo); botones();
-  window.Modos = { dibujar, tick, pointerdown, pointermove, pointerup, botones, proyecto: () => M.proyecto, setModo, _M: M };
+  const boton = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (ev) => { if (!b.dataset.keep) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); fn(ev, b); }; document.querySelector('#sMas .grid3').appendChild(b); return b; };
+  window.Modos = { dibujar, tick, pointerdown, pointermove, pointerup, botones, proyecto: () => M.proyecto, setModo, _M: M,
+    capa: (f) => M.capas.push(f), prov: (f) => M.prov.push(f), ptr: (o) => M.ptr.unshift(o), boton, MODOS, vstate, f1, COL, fem, rostro: () => F, silueta, cuadro, medir, etiqueta, dibujarThumb, superponer, refrescar: () => { M.sigList = ''; lastCorr = 0; },
+    corr: () => M.corr, seleccion: () => M.sel, seleccionar: (id) => { M.sel = id; const c = M.corr.find(x => x.id === id); S.focus = c && c.seg || null; M.sigList = ''; },
+    marcarHecho: (id) => { const b = document.querySelector(`[data-ok="${id}"]`); if (b) b.click(); }, consejoTexto: () => conTexto, guardarProgreso, nav };
   setTimeout(() => { E.refreshButtons(); pintarMini(); }, 50);
 })();
