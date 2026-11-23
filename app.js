@@ -24,9 +24,17 @@
     pose: null, poseReady: false, poseLoading: false, busy: false,
     lastSpeak: 0, lastMsg: '',
     ref: { tx: 0, ty: 0, s: 1, r: 0, edit: false, shown: true, has: false },
+    sm: {}, focus: null, compact: false,
+    fuente: 'canon', custom: null,   // proporciones: canon clásico o "mi referencia" 
   };
   try { Object.assign(S, JSON.parse(localStorage.getItem('escultor') || '{}'), { src: null, frozen: false }); } catch (e) {}
-  const save = () => { try { localStorage.setItem('escultor', JSON.stringify({ edad: S.edad, sexo: S.sexo, comp: S.comp, altura: S.altura, mirror: S.mirror, plumb: S.plumb, contrast: S.contrast, ghost: S.ghost, mode: S.mode })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem('escultor', JSON.stringify({ fuente: S.fuente, custom: S.custom, edad: S.edad, sexo: S.sexo, comp: S.comp, altura: S.altura, mirror: S.mirror, plumb: S.plumb, contrast: S.contrast, ghost: S.ghost, mode: S.mode })); } catch (e) {} };
+
+  function canonActual() {
+    const C = CANON.get(S.edad, S.sexo, S.comp);
+    if (S.fuente === 'ref' && S.custom) { Object.assign(C, S.custom.v); C.nota = 'Proporciones tomadas de TU referencia (' + S.custom.H.toFixed(1) + ' cabezas). Las partes que no se ven en la referencia usan el canon clásico elegido abajo.'; C.H = S.custom.H; C.esRef = true; }
+    return C;
+  }
 
   // ---------- Geometría ----------
   const P = (x, y) => ({ x, y });
@@ -108,7 +116,7 @@
     try {
       const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       vid.srcObject = st; await vid.play();
-      S.src = 'cam'; S.frozen = false; S.snap = null; S.lm = null;
+      S.src = 'cam'; S.frozen = false; S.snap = null; S.lm = null; S.sm = {}; S.focus = null;
       if (S.mode === 'auto') ensurePose();
     } catch (e) {
       flash([['No se pudo abrir la cámara aquí. Funciona al abrir la app desde tu enlace (GitHub Pages) en Chrome de Android. Mientras, usa 🖼️ Foto.', 'warn']], 9000);
@@ -122,7 +130,7 @@
     const f = e.target.files[0]; if (!f) return;
     const im = new Image();
     im.onload = () => {
-      stopCam(); S.img = im; S.src = 'foto'; S.frozen = false; S.snap = null; S.lm = null; S.world = null;
+      stopCam(); S.sm = {}; S.focus = null; S.img = im; S.src = 'foto'; S.frozen = false; S.snap = null; S.lm = null; S.world = null;
       updateFit();
       if (S.mode === 'auto') detectStill(); else seedManual();
       refreshButtons();
@@ -146,6 +154,7 @@
     const pose = new Pose({ locateFile: (f) => (window.__MP_URLS && window.__MP_URLS[f]) || 'mp/' + f });
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     pose.onResults((r) => {
+      if (S.route === 'ref') { RE.lm = r.poseLandmarks || null; RE.world = r.poseWorldLandmarks || null; return; }
       S.lm = r.poseLandmarks || null; S.world = r.poseWorldLandmarks || null;
       if (!S.lm) S.analysis = null;
     });
@@ -155,6 +164,7 @@
   }
   async function detectStill() {
     ensurePose(); if (!S.poseReady || !S.img) return;
+    while (S.busy) await new Promise(r => setTimeout(r, 30));
     S.busy = true;
     try { await S.pose.send({ image: S.img }); } catch (e) { console.error(e); }
     S.busy = false;
@@ -206,7 +216,7 @@
       return;
     }
     // Figura de pie por defecto, centrada
-    const C = CANON.get(S.edad, S.sexo, S.comp);
+    const C = canonActual();
     const u = fit.sh * 0.85 / C.H, cx = fit.sw / 2, y0 = fit.sh * 0.075;
     const yChin = y0 + u, ySh = yChin + C.neck * u, yHip = ySh + C.torso * u;
     const yKn = yHip + C.thigh * u, yAn = yKn + C.shin * u;
@@ -227,10 +237,19 @@
   };
   let drag = null, labelsUntil = 0;
   cv.addEventListener('pointerdown', (e) => {
-    if (S.mode !== 'manual' || !S.manual) return;
-    const q = P(e.offsetX, e.offsetY); let best = null, bd = 44;
-    for (const k of KEYS) { const d = dist(toScr(S.manual[k]), q); if (d < bd) { bd = d; best = k; } }
-    if (best) { drag = best; cv.setPointerCapture(e.pointerId); }
+    const q = P(e.offsetX, e.offsetY);
+    if (S.mode === 'manual' && S.manual) {
+      let best = null, bd = 44;
+      for (const k of KEYS) { const d = dist(toScr(S.manual[k]), q); if (d < bd) { bd = d; best = k; } }
+      if (best) { drag = best; cv.setPointerCapture(e.pointerId); return; }
+    }
+    const A = S.analysis; if (!A) return;
+    let best = null, bd = 36;
+    for (const s of A.segs) {
+      const a = toScr(s.A), b = toScr(s.B), v = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(q, a), v) / (dot(v, v) || 1)));
+      const d = dist(q, add(a, mul(v, t))); if (d < bd) { bd = d; best = s; }
+    }
+    if (best) { S.focus = best.id; lastCard = 0; S.lastMsg = ''; S.compact = false; }
   });
   cv.addEventListener('pointermove', (e) => { if (drag) S.manual[drag] = toImg(P(e.offsetX, e.offsetY - 0)); });
   cv.addEventListener('pointerup', () => { drag = null; });
@@ -238,7 +257,7 @@
   // ---------- Análisis ----------
   function analyze() {
     updateFit();
-    const C = CANON.get(S.edad, S.sexo, S.comp);
+    const C = canonActual();
     let M = S.mode === 'manual' ? S.manual : pointsFromLm();
     if (!M || !M.shL || !M.shR || !M.hipL || !M.hipR) return null;
     M = Object.assign({}, M);
@@ -262,7 +281,8 @@
       if (base === 'tronco' && id === 'torso') { segs.push({ id, ck, side, ratio: 1, f: F('torso'), A, B, isBase: true }); continue; }
       const f = F(id);
       const exp = C[ck] * u;
-      const ratio = dist(A, B) / f / exp;
+      let ratio = dist(A, B) / f / exp;
+      if (S.src === 'cam' && !S.frozen) { const pv = S.sm[id]; ratio = pv ? pv * 0.85 + ratio * 0.15 : ratio; S.sm[id] = ratio; }
       const target = add(A, mul(norm(sub(B, A)), exp * f));
       segs.push({ id, ck, side, ratio, f, A, B, target, unreliable: f < 0.55 });
     }
@@ -370,16 +390,33 @@
 
   function drawMeasured(A) {
     const { M, segs } = A;
+    const foc = segs.find(x => x.id === S.focus);
     for (const s of segs) {
       const a = toScr(s.A), b = toScr(s.B), c = COL[s.st];
-      line(a, b, 4, c);
-      if (S.ghost && s.target && (s.st === 'warn' || s.st === 'bad')) arrow(b, toScr(s.target), c);
+      if (foc && s !== foc) { ctx.globalAlpha = 0.35; line(a, b, 3, c); ctx.globalAlpha = 1; continue; }
+      line(a, b, foc ? 9 : 4, c);
     }
+    if (foc) drawFocus(foc);
     const pts = S.mode === 'manual' ? KEYS : KEYS.filter(k => M[k] && !(M.headEst && (k === 'top' || k === 'chin')));
     for (const k of pts) if (M[k]) circle(toScr(M[k]), S.mode === 'manual' ? 13 : 7, S.mode === 'manual' ? 'rgba(255,255,255,0.25)' : '#fff', S.mode === 'manual' ? '#fff' : null);
     if (S.mode === 'manual') {
       if (drag) label(toScr(M[drag]), KLABEL[drag], '#4fc3f7');
       else if (performance.now() < labelsUntil) for (const k of KEYS) label(toScr(M[k]), KLABEL[k]);
+    }
+  }
+
+  function drawFocus(s) {
+    const t = performance.now() / 1000, a = toScr(s.A), b = toScr(s.B);
+    line(a, b, 15, 'rgba(255,255,255,0.35)');
+    line(a, b, 8, COL[s.st]);
+    if (s.target && (s.st === 'warn' || s.st === 'bad')) {
+      const g = toScr(s.target);
+      ctx.lineDashOffset = -t * 30; arrow(b, g, '#fff'); ctx.lineDashOffset = 0;
+      const r = 16 + 5 * Math.sin(t * 5);
+      circle(g, r, 'rgba(61,220,132,0.25)', '#3ddc84');
+      circle(g, 5, '#3ddc84');
+      label(add(g, P(r, 0)), 'aquí', '#3ddc84');
+      circle(b, 9, null, '#fff');
     }
   }
 
@@ -389,8 +426,8 @@
     const c0 = P(cw / 2, ch - 28);
     line(add(c0, mul(r, -90)), add(c0, mul(r, 90)), 3, '#ffeb3b');
     const out = [];
-    if (!gotMotion) out.push(['Plomada sin sensor: se toma la vertical de la pantalla.', 'warn']);
-    else if (S.tilt > 12) out.push([`📱 Teléfono inclinado ${Math.round(S.tilt)}°: ponlo vertical o deformará las proporciones.`, 'warn']);
+    if (!gotMotion && 'ontouchstart' in window) out.push(['Sin sensor de inclinación: la plomada usa la vertical de la pantalla.', 'warn']);
+    else if (gotMotion && S.tilt > 12) out.push([`📱 Teléfono inclinado ${Math.round(S.tilt)}°: ponlo vertical o deformará las proporciones.`, 'warn']);
     if (!A) { // solo plomada
       const p = P(cw / 2, 0); line(p, add(p, mul(d, ch * 2)), 2, '#ffeb3b', [10, 8]); return out;
     }
@@ -405,9 +442,11 @@
       const A2 = toScr(a), B2 = toScr(b), v = norm(sub(B2, A2));
       line(add(A2, mul(v, -40)), add(B2, mul(v, 40)), 2, '#ffeb3b');
     }
-    const lado = (t, fem) => (t > 0 ? 'izquierd' : 'derech') + (fem ? 'a' : 'o') + ' más baj' + (fem ? 'a' : 'o');
-    let txt = `Hombros: ${Math.abs(tS) < 2 ? 'nivelados' : Math.round(Math.abs(tS)) + '°, ' + lado(tS)} · Caderas: ${Math.abs(tH) < 2 ? 'niveladas' : Math.round(Math.abs(tH)) + '°, ' + lado(tH, true)}`;
-    if (Math.abs(tS) >= 2 && Math.abs(tH) >= 2 && Math.sign(tS) !== Math.sign(tH)) txt += ' → contrapposto ✓';
+    const lado = (t, fem) => (t > 0 ? 'izquierd' : 'derech') + (fem ? 'a' : 'o');
+    let txt = (Math.abs(tS) < 2 ? 'Hombros rectos' : `El hombro ${lado(tS)} está más bajo`) + ' · ' + (Math.abs(tH) < 2 ? 'caderas rectas' : `la cadera ${lado(tH, true)} está más baja`);
+    if (Math.abs(tS) >= 2 && Math.abs(tH) >= 2) txt += Math.sign(tS) !== Math.sign(tH)
+      ? '\n✓ Se inclinan en sentidos contrarios: postura natural (contrapposto).'
+      : '\n⚠️ Hombros y caderas caen hacia el mismo lado: la figura parecerá ladeada.';
     // Equilibrio (si está de pie): ¿dónde cae la plomada respecto a los tobillos?
     if (M.anL && M.anR) {
       const xr = (p) => dot(sub(toScr(p), neck), r);
@@ -436,22 +475,78 @@
     for (const s of A.segs) if (s.st === 'bad' || s.st === 'warn') if (!w || Math.abs(s.ratio - 1) > Math.abs(w.ratio - 1)) w = s;
     return w;
   }
-  function speak(A) {
-    if (!S.voice || !window.speechSynthesis || !A) return;
-    const now = performance.now(); if (now - S.lastSpeak < 5000) return;
-    const w = worst(A);
-    const msg = w ? `${NOMBRE(w)}: ${juicio(w)}, ${Math.round(Math.abs(w.ratio - 1) * 100)} por ciento` : 'Proporciones correctas';
+  function say(msg) {
+    if (!S.voice || !window.speechSynthesis) return;
+    const now = performance.now();
     if (msg === S.lastMsg && now - S.lastSpeak < 15000) return;
+    if (now - S.lastSpeak < 4000) return;
     S.lastSpeak = now; S.lastMsg = msg;
     const ut = new SpeechSynthesisUtterance(msg); ut.lang = 'es-ES'; ut.rate = 1;
     speechSynthesis.cancel(); speechSynthesis.speak(ut);
+  }
+
+  // ---------- Tarjeta guía (una corrección a la vez) ----------
+  const EXT = { head: ['la barbilla', 'el cráneo'], neck: ['los hombros', 'la barbilla'], torso: ['las caderas', 'los hombros'], ua: ['el hombro', 'el codo'], fa: ['el codo', 'la muñeca'], thigh: ['la cadera', 'la rodilla'], shin: ['la rodilla', 'el tobillo'] };
+  const fmt = (x) => x.toFixed(1).replace('.', ',');
+  function correcciones(A) {
+    const rank = { bad: 0, warn: 1, gray: 2 };
+    return A.segs.filter(s => s.st in rank).sort((a, b) => rank[a.st] - rank[b.st] || Math.abs(b.ratio - 1) - Math.abs(a.ratio - 1));
+  }
+  function explicar(s, A) {
+    const C = A.C, cmCab = S.altura / C.H;
+    const E = C[s.ck] * cmCab, M = s.ratio * E, d = fmt(Math.abs(M - E));
+    const nom = NOMBRE(s), info = CANON.segInfo[s.ck];
+    const quien = C.esRef ? 'tu referencia' : 'el canon';
+    if (s.isBase) return { title: `📏 ${nom}: medida base`, text: `Todo se mide en proporción a esta parte, así que siempre sale correcta. ${A.base === 'tronco' ? 'Para medir también el tronco usa ✋ Manual (ahí la base es la cabeza).' : ''}`, tip: info.tip, col: COL.base };
+    if (s.st === 'gray') return { title: `⚪ ${nom}: no se puede medir desde aquí`, text: 'Esta parte apunta hacia la cámara (escorzo) y se ve más corta de lo que es. Gira la pieza o muévete hacia un lado y vuelve a mirar.', tip: info.tip, col: COL.gray };
+    if (s.st === 'ok') return { title: `✅ ${nom}: ¡bien!`, text: `Mide unos ${fmt(M)} cm y ${quien} pide ${fmt(E)} cm. Dentro de lo correcto.`, tip: info.tip, col: COL.ok };
+    const largo = s.ratio > 1, icon = s.st === 'bad' ? '🔴' : '🟡';
+    let text;
+    if (s.ck === 'shW' || s.ck === 'hipW') {
+      const q = s.ck === 'shW' ? 'los hombros' : 'las caderas';
+      text = largo ? `Están demasiado separados. Acerca ${q} entre sí unos ${d} cm en total.` : `Están demasiado juntos. Separa ${q} unos ${d} cm en total.`;
+    } else {
+      const [ini, fin] = EXT[s.ck];
+      text = `Mide ${fmt(M)} cm y según ${quien} debería medir ${fmt(E)} cm. ` + (largo
+        ? `Acórtalo ${d} cm: acerca ${fin} hacia ${ini} hasta el círculo verde que late.`
+        : `Alárgalo ${d} cm: aleja ${fin} de ${ini} hasta el círculo verde que late.`);
+    }
+    return { title: `${icon} ${nom} ${juicio(s)}`, text, tip: info.tip, col: COL[s.st], voice: `${nom} ${juicio(s)}. ${largo ? 'Acórtalo' : 'Alárgalo'} ${d.replace(',', ' coma ')} centímetros.` };
+  }
+  let lastCard = 0;
+  function cardMsg(title, text, col) {
+    const c = $('card'); c.style.display = 'block'; c.style.borderLeftColor = col || '#4fc3f7';
+    $('cTitle').textContent = title; $('cText').textContent = text; $('cTip').style.display = 'none'; $('cCount').textContent = '';
+  }
+  function updateCard(A) {
+    const list = correcciones(A);
+    let s = A.segs.find(x => x.id === S.focus);
+    if (!s && list.length) { s = list[0]; S.focus = s.id; }
+    if (!s) S.focus = null;
+    const now = performance.now(); if (now - lastCard < 250) return; lastCard = now;
+    if (!s) { cardMsg('🟢 ¡Todo en proporción!', 'Todas las partes visibles están bien. Gira la pieza y revisa otra vista.', COL.ok); say('Todas las proporciones están bien'); return; }
+    const c = $('card'); c.style.display = 'block';
+    const e = explicar(s, A), i = list.indexOf(s);
+    c.style.borderLeftColor = e.col;
+    $('cTitle').textContent = e.title;
+    $('cText').textContent = S.compact ? '' : e.text;
+    $('cTip').style.display = S.compact ? 'none' : 'block';
+    $('cTipTxt').textContent = e.tip;
+    $('cCount').textContent = list.length ? (i >= 0 ? `${i + 1} de ${list.length}` : `${list.length} por corregir`) : '';
+    if (e.voice) say(e.voice);
+  }
+  function step(dir) {
+    const A = S.analysis; if (!A) return;
+    const list = correcciones(A); if (!list.length) { S.focus = null; return; }
+    const i = list.findIndex(x => x.id === S.focus);
+    S.focus = list[(i + dir + list.length) % list.length].id; lastCard = 0; S.lastMsg = ''; S.compact = false;
   }
 
   // ---------- Panel de medidas ----------
   let lastTable = 0;
   function renderTable(A) {
     const now = performance.now(); if (now - lastTable < 500 || !$('sMed').classList.contains('open')) return; lastTable = now;
-    const C = CANON.get(S.edad, S.sexo, S.comp);
+    const C = canonActual();
     const cmPorCab = S.altura / C.H;
     let html = `<tr><th>Parte</th><th class="num">Canon</th><th class="num">Medido</th></tr>`;
     const rows = [['head', ''], ['neck', ''], ['torso', ''], ['shW', ''], ['hipW', ''], ['ua', 'izq'], ['ua', 'der'], ['fa', 'izq'], ['fa', 'der'], ['hand', ''], ['thigh', 'izq'], ['thigh', 'der'], ['shin', 'izq'], ['shin', 'der'], ['foot', '']];
@@ -480,16 +575,12 @@
       if (A) drawMeasured(A);
       if (S.plumb) info = info.concat(drawPlumb(A));
       if (A) {
-        const w = worst(A);
-        const gray = A.segs.some(s => s.st === 'gray');
-        if (w) info.unshift([`${w.st === 'bad' ? '🔴' : '🟡'} ${NOMBRE(w)} ${juicio(w)} (${Math.round(Math.abs(w.ratio - 1) * 100)}%) — sigue la flecha`, w.st]);
-        else info.unshift(['🟢 Proporciones dentro del canon', 'ok']);
-        if (gray) info.push(['⚪ Hay partes en escorzo fuerte: toma otra vista para medirlas.', '']);
-        speak(A);
+        updateCard(A);
       } else if (S.mode === 'auto') {
-        info.unshift([S.poseLoading ? 'Cargando detector… (la primera vez tarda un poco)' : (S.poseReady ? 'Buscando la figura… encuádrala completa' : ''), 'warn']);
+        cardMsg(S.poseLoading ? '⏳ Cargando detector…' : '🔎 Buscando la figura…', S.poseLoading ? 'La primera vez tarda unos segundos.' : 'Encuadra la figura completa, de la cabeza a los pies, con buena luz.', '#ffca28');
       }
     }
+    if (!has) $('card').style.display = 'none';
     renderTable(A);
     if (flashMsg && performance.now() < flashMsg.until) info = flashMsg.list.concat(info);
     pills(info.filter(i => i[0]).slice(0, 3));
@@ -497,6 +588,116 @@
   }
 
   // ---------- Botones ----------
+  $('cPrev').onclick = () => step(-1);
+  $('cNext').onclick = () => step(1);
+  $('cHelp').onclick = () => openSheet('sHelp');
+  $('cTitle').onclick = () => { S.compact = !S.compact; lastCard = 0; };
+  try { if (!localStorage.getItem('escultorAyuda')) { setTimeout(() => openSheet('sHelp'), 600); localStorage.setItem('escultorAyuda', '1'); } } catch (e) {}
+
+  // ---------- Mi referencia: proporciones tomadas de una imagen ----------
+  const RE = { img: null, pts: null, lm: null, world: null, drag: null };
+  const rcv = $('reCv'), rctx = rcv.getContext('2d');
+  let rfit = { s: 1, ox: 0, oy: 0 };
+  function reLayout() {
+    const r = rcv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    rcv.width = r.width * d; rcv.height = r.height * d; rctx.setTransform(d, 0, 0, d, 0, 0);
+    if (RE.img) { const s = Math.min(r.width / RE.img.naturalWidth, r.height / RE.img.naturalHeight); rfit = { s, ox: (r.width - RE.img.naturalWidth * s) / 2, oy: (r.height - RE.img.naturalHeight * s) / 2, w: r.width, h: r.height }; }
+  }
+  const rS = (p) => P(rfit.ox + p.x * rfit.s, rfit.oy + p.y * rfit.s), rI = (q) => P((q.x - rfit.ox) / rfit.s, (q.y - rfit.oy) / rfit.s);
+  function reDraw() {
+    if (!$('refEd').classList.contains('open')) return;
+    rctx.fillStyle = '#000'; rctx.fillRect(0, 0, rfit.w || 2000, rfit.h || 2000);
+    if (RE.img) rctx.drawImage(RE.img, rfit.ox, rfit.oy, RE.img.naturalWidth * rfit.s, RE.img.naturalHeight * rfit.s);
+    if (RE.pts) {
+      const bones = [['top', 'chin'], ['shL', 'shR'], ['hipL', 'hipR'], ['shL', 'elL'], ['elL', 'wrL'], ['shR', 'elR'], ['elR', 'wrR'], ['hipL', 'knL'], ['knL', 'anL'], ['hipR', 'knR'], ['knR', 'anR']];
+      rctx.lineWidth = 4; rctx.strokeStyle = '#4fc3f7'; rctx.lineCap = 'round';
+      for (const [a, b] of bones) { const A = rS(RE.pts[a]), B = rS(RE.pts[b]); rctx.beginPath(); rctx.moveTo(A.x, A.y); rctx.lineTo(B.x, B.y); rctx.stroke(); }
+      const ms = rS(mid(RE.pts.shL, RE.pts.shR)), mh = rS(mid(RE.pts.hipL, RE.pts.hipR)), ch2 = rS(RE.pts.chin);
+      rctx.beginPath(); rctx.moveTo(ch2.x, ch2.y); rctx.lineTo(ms.x, ms.y); rctx.lineTo(mh.x, mh.y); rctx.stroke();
+      for (const k of KEYS) {
+        const q = rS(RE.pts[k]), hot = k === 'top' || k === 'chin';
+        rctx.beginPath(); rctx.arc(q.x, q.y, k === RE.drag ? 16 : 11, 0, 7); rctx.fillStyle = hot ? 'rgba(255,202,40,.45)' : 'rgba(255,255,255,.3)'; rctx.fill(); rctx.lineWidth = 3; rctx.strokeStyle = hot ? '#ffca28' : '#fff'; rctx.stroke();
+      }
+      if (RE.drag) { const q = rS(RE.pts[RE.drag]); rctx.font = '600 16px system-ui'; rctx.fillStyle = 'rgba(0,0,0,.75)'; const t = KLABEL[RE.drag], w = rctx.measureText(t).width; rctx.fillRect(q.x + 14, q.y - 30, w + 12, 24); rctx.fillStyle = '#4fc3f7'; rctx.fillText(t, q.x + 20, q.y - 12); }
+    }
+    requestAnimationFrame(reDraw);
+  }
+  function reSeed() {
+    const W = RE.img.naturalWidth, H = RE.img.naturalHeight;
+    const lm = RE.lm;
+    if (lm) {
+      const pt = (i) => P(lm[i].x * W, lm[i].y * H);
+      RE.pts = {}; for (const k in IDX) RE.pts[k] = pt(IDX[k]);
+      // cabeza: estimar desde hombros con el canon (el usuario la ajusta)
+      const C = CANON.get(S.edad, S.sexo, S.comp), ms = mid(RE.pts.shL, RE.pts.shR), mh = mid(RE.pts.hipL, RE.pts.hipR);
+      const u = dist(ms, mh) / C.torso, up = norm(sub(ms, mh));
+      RE.pts.chin = add(ms, mul(up, C.neck * u)); RE.pts.top = add(RE.pts.chin, mul(up, u));
+    } else {
+      const C = CANON.get(S.edad, S.sexo, S.comp), u = H * 0.85 / C.H, cx = W / 2, y0 = H * 0.075;
+      const yC = y0 + u, yS = yC + C.neck * u, yH = yS + C.torso * u, yK = yH + C.thigh * u, yA = yK + C.shin * u, sx = C.shW / 2 * u, hx = C.hipW / 2 * u;
+      RE.pts = { top: P(cx, y0), chin: P(cx, yC), shL: P(cx + sx, yS), shR: P(cx - sx, yS), elL: P(cx + sx, yS + C.ua * u), elR: P(cx - sx, yS + C.ua * u), wrL: P(cx + sx, yS + (C.ua + C.fa) * u), wrR: P(cx - sx, yS + (C.ua + C.fa) * u), hipL: P(cx + hx, yH), hipR: P(cx - hx, yH), knL: P(cx + hx, yK), knR: P(cx - hx, yK), anL: P(cx + hx, yA), anR: P(cx - hx, yA) };
+    }
+  }
+  async function reDetect() {
+    ensurePose();
+    $('reMsg').textContent = '⏳ Buscando el cuerpo en la referencia…';
+    for (let i = 0; i < 200 && !S.poseReady; i++) await new Promise(r => setTimeout(r, 100));
+    if (!S.poseReady) { $('reMsg').textContent = 'No se pudo cargar el detector. Coloca los puntos a mano.'; reSeed(); return; }
+    while (S.busy) await new Promise(r => setTimeout(r, 30));
+    S.busy = true; S.route = 'ref'; RE.lm = null; RE.world = null;
+    try { await S.pose.send({ image: RE.img }); } catch (e) { console.error(e); }
+    S.route = null; S.busy = false; S.sm = {};
+    const ok = RE.lm && [11, 12, 23, 24].every(i => (RE.lm[i].visibility ?? 1) > 0.4);
+    if (!ok) RE.lm = null;
+    reSeed();
+    $('reMsg').innerHTML = ok
+      ? '✅ Encontré el cuerpo. Revisa los puntos y <b>coloca bien los dos amarillos: punto más alto del cráneo y barbilla</b> (miden la cabeza).'
+      : 'No reconocí un cuerpo (pasa con dibujos muy estilizados). <b>Arrastra cada punto a su sitio</b>; los amarillos son cráneo y barbilla.';
+  }
+  function reOpen() { $('refEd').classList.add('open'); requestAnimationFrame(() => { reLayout(); reDraw(); }); }
+  $('bFuenteRef').onclick = () => { if (S.custom) { S.fuente = 'ref'; save(); paintSet(); } else $('fRefCanon').click(); };
+  $('bFuenteCanon').onclick = () => { S.fuente = 'canon'; save(); paintSet(); };
+  $('bRefNueva').onclick = () => $('fRefCanon').click();
+  $('fRefCanon').onchange = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const im = new Image();
+    im.onload = () => { RE.img = im; RE.pts = null; $('sSet').classList.remove('open'); reOpen(); reDetect(); };
+    im.src = URL.createObjectURL(f); e.target.value = '';
+  };
+  rcv.addEventListener('pointerdown', (e) => {
+    if (!RE.pts) return; const q = P(e.offsetX, e.offsetY); let best = null, bd = 44;
+    for (const k of KEYS) { const d = dist(rS(RE.pts[k]), q); if (d < bd) { bd = d; best = k; } }
+    if (best) { RE.drag = best; rcv.setPointerCapture(e.pointerId); }
+  });
+  rcv.addEventListener('pointermove', (e) => { if (RE.drag) RE.pts[RE.drag] = rI(P(e.offsetX, e.offsetY)); });
+  rcv.addEventListener('pointerup', () => { RE.drag = null; });
+  $('reCancel').onclick = () => $('refEd').classList.remove('open');
+  $('reSave').onclick = () => {
+    const p = RE.pts; if (!p) return;
+    const u = dist(p.top, p.chin); if (u < 3) return;
+    // escorzo de la referencia (si se detectó en 3D)
+    const w = RE.world, fW = (i, j) => { if (!w) return 1; const dx = w[i].x - w[j].x, dy = w[i].y - w[j].y, dz = w[i].z - w[j].z; return Math.max(0.5, Math.hypot(dx, dy) / (Math.hypot(dx, dy, dz) || 1)); };
+    const ms = mid(p.shL, p.shR), mh = mid(p.hipL, p.hipR);
+    const L = (a, b, f) => dist(p[a], p[b]) / (f || 1) / u;
+    const avg = (a, b) => (a + b) / 2;
+    const v = {
+      neck: dist(p.chin, ms) / u,
+      torso: dist(ms, mh) / u,
+      shW: L('shL', 'shR', fW(11, 12)), hipW: L('hipL', 'hipR', fW(23, 24)),
+      ua: avg(L('shL', 'elL', fW(11, 13)), L('shR', 'elR', fW(12, 14))),
+      fa: avg(L('elL', 'wrL', fW(13, 15)), L('elR', 'wrR', fW(14, 16))),
+      thigh: avg(L('hipL', 'knL', fW(23, 25)), L('hipR', 'knR', fW(24, 26))),
+      shin: avg(L('knL', 'anL', fW(25, 27)), L('knR', 'anR', fW(26, 28))),
+    };
+    const base = CANON.get(S.edad, S.sexo, S.comp);
+    const H = 1 + v.neck + v.torso + v.thigh + v.shin + base.floor;
+    S.custom = { v, H, fecha: Date.now() }; S.fuente = 'ref';
+    save(); paintSet(); S.sm = {}; S.focus = null;
+    $('refEd').classList.remove('open');
+    flash([[`✅ Proporciones de tu referencia guardadas: ${H.toFixed(1)} cabezas. El maniquí ahora sigue tu diseño.`, 'ok']], 7000);
+  };
+  window.addEventListener('resize', () => { if ($('refEd').classList.contains('open')) reLayout(); });
+
   $('bGhost').onclick = () => { S.ghost = !S.ghost; save(); refreshButtons(); };
   $('bMirror').onclick = () => { S.mirror = !S.mirror; save(); refreshButtons(); };
   $('bContrast').onclick = () => { S.contrast = !S.contrast; save(); refreshButtons(); };
@@ -521,8 +722,12 @@
   function paintSet() {
     for (const [el, key] of [[optEdad, 'edad'], [$('optSexo'), 'sexo'], [$('optComp'), 'comp']]) el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === S[key]));
     $('inAltura').value = S.altura;
-    const C = CANON.get(S.edad, S.sexo, S.comp);
+    const C = canonActual();
     $('notaFigura').textContent = C.nota;
+    $('bFuenteCanon').classList.toggle('on', S.fuente !== 'ref');
+    $('bFuenteRef').classList.toggle('on', S.fuente === 'ref');
+    $('bRefNueva').style.display = S.custom ? 'block' : 'none';
+    $('refInfo').innerHTML = S.custom ? `Referencia guardada: <b>${S.custom.H.toFixed(1)} cabezas</b> · brazo ${S.custom.v.ua.toFixed(2)} · antebrazo ${S.custom.v.fa.toFixed(2)} · muslo ${S.custom.v.thigh.toFixed(2)} · pierna ${S.custom.v.shin.toFixed(2)} cab.` : 'Carga un dibujo, boceto o foto de cómo quieres que sea tu escultura. Lo ideal: figura completa, de frente y de pie.';
     lastTable = 0;
   }
   bindSeg(optEdad, 'edad'); bindSeg($('optSexo'), 'sexo'); bindSeg($('optComp'), 'comp');
