@@ -159,11 +159,11 @@
     if (typeof Pose === 'undefined') { flash([['No se pudo cargar el detector. Usa el modo ✋ Manual.', 'bad']], 9000); return; }
     S.poseLoading = true;
     const pose = new Pose({ locateFile: (f) => (window.__MP_URLS && window.__MP_URLS[f]) || 'mp/' + f });
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: !!S.segOn, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     pose.onResults((r) => {
       if (S.route === 'lib') { S.libRes = r; return; }
       if (S.route === 'ref') { RE.lm = r.poseLandmarks || null; RE.world = r.poseWorldLandmarks || null; return; }
-      S.lm = r.poseLandmarks || null; S.world = r.poseWorldLandmarks || null;
+      S.lm = r.poseLandmarks || null; S.world = r.poseWorldLandmarks || null; S.seg = r.segmentationMask || null; S.segT = performance.now();
       if (!S.lm) S.analysis = null;
     });
     S.pose = pose;
@@ -941,6 +941,7 @@
     get fit() { return fit; }, get cw() { return cw; }, get ch() { return ch; }, get vid() { return vid; },
     fuente: () => (S.frozen && S.snap) ? S.snap : (S.src === 'cam' ? (vid.readyState >= 2 ? vid : null) : (S.src === 'foto' ? S.img : null)),
     poseState: () => ({ ready: S.poseReady, loading: S.poseLoading }),
+    setSeg: (on) => { if (S.segOn === on) return; S.segOn = on; S.seg = null; if (S.pose) { try { S.pose.setOptions({ enableSegmentation: on }); } catch (e) {} } },
   };
   // API para la Biblioteca
   async function detectPoseOn(img) {

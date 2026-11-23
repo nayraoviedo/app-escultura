@@ -19,7 +19,7 @@
   const v3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }), L3 = (v) => Math.hypot(v.x, v.y, v.z), L2 = (v) => Math.hypot(v.x, v.y);
   const m3 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
   const W3 = () => (S.mode === 'auto' && S.world && S.world.length > 30) ? S.world : null;
-  const M = { corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
+  const M = { anchos: [], autoRef: ls.get('escultorAutoRef', true), autoId: null, corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
   S.modo = ls.get('escultorModo', 'cuerpo');
   if (S.modo === 'biblio') S.modo = 'cuerpo';
 
@@ -28,8 +28,9 @@
   function setModo(m) {
     if (m === 'biblio') { B() && B().abrir('buscar'); return; }
     S.modo = m; ls.set('escultorModo', m);
-    S.focus = null; M.sel = null; M.live = null; M.liveKey = null; M.sigList = ''; M.sug = [];
+    S.focus = null; M.sel = null; M.live = null; M.liveKey = null; M.sigList = ''; M.sug = []; M.anchos = [];
     document.querySelectorAll('#modos button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    E.setSeg(m === 'piernas' || m === 'torso');
     if (m === 'rostro' || m === 'manos') B() && B().sol(m === 'rostro' ? 'face' : 'hand').catch(() => {});
     else if (S.mode === 'auto') { E.ensurePose(); if (S.src === 'foto' || S.frozen) E.detectStill(); }
     pintarMini(); botones();
@@ -84,9 +85,35 @@
     return out;
   }
 
+  // ======================= Silueta (máscara del detector) =======================
+  const SIL = { c: null, data: null, w: 0, h: 0, k: 1, t: 0, src: null };
+  function silueta() {
+    const mk = S.seg; if (!mk) return null;
+    if (SIL.data && SIL.src === mk && performance.now() - SIL.t < 400) return SIL;
+    const w = 320, h = Math.max(1, Math.round(320 * E.fit.sh / E.fit.sw));
+    const c = SIL.c || (SIL.c = document.createElement('canvas')); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    try { x.clearRect(0, 0, w, h); x.drawImage(mk, 0, 0, w, h); SIL.data = x.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+    SIL.w = w; SIL.h = h; SIL.k = w / E.fit.sw; SIL.t = performance.now(); SIL.src = mk;
+    return SIL;
+  }
+  const dentro = (sl, q) => { const x = Math.round(q.x * sl.k), y = Math.round(q.y * sl.k); return x >= 0 && y >= 0 && x < sl.w && y < sl.h && sl.data[(y * sl.w + x) * 4 + 3] > 120; };
+  function ancho(sl, c, dir, maxPx) {
+    if (!dentro(sl, c)) return null;
+    const st = 1 / sl.k; let a = 0, b = 0;
+    while (a < maxPx && dentro(sl, add(c, mul(dir, -(a + st))))) a += st;
+    while (b < maxPx && dentro(sl, add(c, mul(dir, b + st)))) b += st;
+    return { A: add(c, mul(dir, -a)), B: add(c, mul(dir, b)), w: a + b, tope: a >= maxPx || b >= maxPx };
+  }
+  const adultoT = () => S.edad === 'teen' || String(S.edad).startsWith('adulto');
+  const kComp = () => ({ delgada: 0.9, media: 1, robusta: 1.12 }[S.comp] || 1);
+
   // ======================= TORSO =======================
-  const T_KEYS = ['pezL', 'pezR', 'omb', 'cinL', 'cinR'];
-  const T_LAB = { pezL: 'Pezón izq.', pezR: 'Pezón der.', omb: 'Ombligo', cinL: 'Cintura izq.', cinR: 'Cintura der.' };
+  const T_BASE = ['pezL', 'pezR', 'omb', 'cinL', 'cinR'];
+  const T_PECHO = ['extL', 'extR', 'plgL', 'plgR'];
+  const T_LAB = { pezL: 'Pezón izq.', pezR: 'Pezón der.', omb: 'Ombligo', cinL: 'Cintura izq.', cinR: 'Cintura der.', extL: 'Borde ext. pecho izq.', extR: 'Borde ext. pecho der.', plgL: 'Pliegue pecho izq.', plgR: 'Pliegue pecho der.', pezP: 'Pezón', plgP: 'Pliegue bajo el pecho', ombP: 'Ombligo' };
+  const enPerfil = (T) => S.view === 'left' || S.view === 'right' || T.giro > 55;
+  const tKeys = (T) => enPerfil(T) ? (fem() ? ['pezP', 'plgP', 'ombP'] : ['pezP', 'ombP']) : (fem() ? T_BASE.concat(T_PECHO) : T_BASE);
   function torsoGeo(A) {
     const C = A.C, u = A.u, Mm = A.M;
     const up = norm(sub(Mm.midSh, Mm.midHip)), down = mul(up, -1);
@@ -105,63 +132,116 @@
       const nl = L3(n) || 1; nxy = P(n.x / nl, n.y / nl);
       alejado = w[11].z > w[12].z ? 'izquierdo' : 'derecho'; haciaCam = t.z < 0;
     }
+    // de perfil: hacia dónde mira el pecho (por la nariz)
+    let front = perp;
+    if (S.lm && S.lm[0]) { const nose = P(S.lm[0].x * E.fit.sw, S.lm[0].y * E.fit.sh); front = P(-up.y, up.x); if (dot(front, sub(nose, Mm.midSh)) < 0) front = mul(front, -1); }
     const hLine = (h8) => baseH + (h8 - 1.33) / 2.55 * C.torso;
-    const at = (h8, off, prof) => add(add(add(Mm.midSh, mul(down, (hLine(h8) - baseH) * u * fT)), mul(perp, off * u * fW)), mul(nxy, (prof ?? 0.4) * u));
+    const bajar = (h8) => mul(down, (hLine(h8) - baseH) * u * fT);
+    const at = (h8, off, prof) => add(add(add(Mm.midSh, bajar(h8)), mul(perp, off * u * fW)), mul(nxy, (prof ?? 0.4) * u));
+    const atP = (h8, prof) => add(add(Mm.midSh, bajar(h8)), mul(front, prof * u));
     const G = F ? [['Clavículas', 1.36, 0.9 * k], ['Pezones', 2.15, 0.6 * k, 0.47 * k], ['Bajo el pecho', 2.35, 0.62 * k], ['Cintura', 2.6, 0.55 * kh], ['Ombligo', 3.05, 0.25], ['Crestas ilíacas', 3.3, 0.78 * kh], ['Caderas (más ancho)', 3.8, 0.92 * kh], ['Pubis', 4.0, 0.3]]
       : [['Clavículas', 1.36, 0.95 * k], ['Pezones', 2.0, 0.62 * k, 0.5 * k], ['Cintura', 2.75, 0.66 * kh], ['Ombligo', 3.0, 0.25], ['Crestas ilíacas', 3.3, 0.72 * kh], ['Caderas (más ancho)', 3.75, 0.8 * kh], ['Pubis', 4.0, 0.3]];
     const g = (n) => G.find(x => x[0] === n);
-    const tgt = { pezL: at(g('Pezones')[1], g('Pezones')[3]), pezR: at(g('Pezones')[1], -g('Pezones')[3]), omb: at(g('Ombligo')[1], 0), cinL: at(g('Cintura')[1], g('Cintura')[2]), cinR: at(g('Cintura')[1], -g('Cintura')[2]) };
-    return { G, at, tgt, up, down, perp, u, cmPx: (S.altura / C.H) / u, fT, fW, nxy, giro, incl, alejado, haciaCam, con3D: !!w };
+    const hPez = g('Pezones')[1], oPez = g('Pezones')[3], hBajo = F ? g('Bajo el pecho')[1] : hPez + 0.2, hOmb = g('Ombligo')[1];
+    const tgt = {
+      pezL: at(hPez, oPez), pezR: at(hPez, -oPez), omb: at(hOmb, 0), cinL: at(g('Cintura')[1], g('Cintura')[2]), cinR: at(g('Cintura')[1], -g('Cintura')[2]),
+      extL: at(hPez, oPez + 0.38 * k), extR: at(hPez, -oPez - 0.38 * k), plgL: at(hBajo, oPez), plgR: at(hBajo, -oPez),
+      pezP: atP(hPez, F ? 0.75 : 0.55), plgP: atP(hBajo, 0.55), ombP: atP(hOmb, 0.42),
+    };
+    return { G, at, atP, tgt, up, down, perp, front, u, cmPx: (S.altura / C.H) / u, fT, fW, nxy, giro, incl, alejado, haciaCam, con3D: !!w };
   }
   const vstate = () => S.views[S.view];
+
+  // anchos del tronco por la silueta (pecho, cintura, caderas)
+  function anchosTorso(A, T) {
+    const sl = silueta(); if (!sl || enPerfil(T) || !adultoT()) return [];
+    const F = fem(), kc = kComp(), cm = T.cmPx, out = [];
+    const tabla = F ? [['Pecho', 'Pezones', 1.3], ['Cintura', 'Cintura', 1.05], ['Caderas', 'Caderas (más ancho)', 1.6]] : [['Pecho', 'Pezones', 1.45], ['Cintura', 'Cintura', 1.25], ['Caderas', 'Caderas (más ancho)', 1.45]];
+    const brazos = ['elL', 'elR', 'wrL', 'wrR'].map(k => A.M[k]).filter(Boolean);
+    let pegados = false;
+    for (const [nom, linea, cw] of tabla) {
+      const gg = T.G.find(x => x[0] === linea); if (!gg) continue;
+      const c = nom === 'Caderas' ? A.M.midHip : T.at(gg[1], 0, 0), ideal = cw * kc * T.fW * T.u;
+      const r = ancho(sl, c, T.perp, ideal * 0.9); if (!r || r.tope) continue;
+      const toca = brazos.some(b => Math.abs(dot(sub(b, c), T.down)) < 0.6 * T.u && Math.abs(dot(sub(b, c), T.perp)) < r.w / 2 + 0.15 * T.u);
+      if (toca) { pegados = true; continue; }
+      const q = r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.15 ? 'warn' : 'ok';
+      M.anchos.push({ A: r.A, B: r.B, t: f1(r.w * cm) + ' cm', st });
+      if (st !== 'ok') out.push({ id: 's:t' + nom, parte: `${nom} (silueta)`, texto: `Mide ≈ ${f1(r.w * cm)} cm de ancho; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Reduce' : 'Aumenta'} el volumen ${f1(Math.abs(r.w - ideal) * cm)} cm en total.`, st, at: c, tip: F ? 'En la mujer, la cintura es lo más estrecho del tronco y las caderas igualan o superan el ancho de los hombros.' : 'En el hombre, el tronco es un trapecio: hombros y pecho anchos, cintura poco marcada y caderas estrechas.' });
+    }
+    if (pegados) out.push({ id: 's:tbrazos', parte: 'Anchos del tronco', texto: 'Los brazos tocan el tronco y la silueta se mezcla: no mido esos anchos. Usa los puntos de cintura o mira cuando los brazos estén separados.', st: 'info', at: A.M.midHip, tip: 'Para medir anchos a mano, usa el compás de punta a punta del contorno, a la altura de cada línea guía.' });
+    return out;
+  }
+
   function corrTorso(A) {
-    const out = corrCuerpo(A, ['torso', 'shW', 'hipW']);
-    const T = torsoGeo(A), vs = vstate();
-    if (S.view === 'back') { out.push({ id: 't:espalda', parte: 'Torso de espaldas', texto: 'De espaldas no se ven pezones ni ombligo. Revisa la línea de hombros, la cintura y las caderas con las guías; para el pecho usa la vista de frente.', st: 'info', at: A.M.midSh, tip: 'En la espalda, los omóplatos ocupan desde la 2.ª costilla hasta la 7.ª; los hoyuelos de Venus marcan las espinas ilíacas posteriores, a la altura del sacro.' }); return out; }
-    if (T.giro > 55 || T.fT < 0.5) { out.push({ id: 't:muygirado', parte: 'Torso muy girado', texto: `El tronco está girado ${Math.round(T.giro)}° e inclinado ${Math.round(T.incl)}° respecto a la cámara: desde aquí las guías del pecho no son fiables. Mira la pieza de frente o en tres cuartos.`, st: 'info', at: A.M.midSh, tip: 'Con el tronco de perfil, compara mejor la profundidad: el pecho sobresale más que el abdomen en el hombre; en la mujer, el pecho y el glúteo marcan la curva en S.' }); return out; }
-    if (T.con3D && (T.giro > 12 || T.incl > 12)) out.push({ id: 't:escorzo', parte: 'Escorzo del tronco', texto: `Tronco girado ${Math.round(T.giro)}° (el hombro ${T.alejado} se aleja) e inclinado ${Math.round(T.incl)}° ${T.haciaCam ? 'hacia la cámara' : 'alejándose de la cámara'}. Ya ajusté las guías: las líneas se acortan y se desplazan como en tu pieza.`, st: 'info', at: A.M.midSh, tip: 'Cuando el tronco gira, la línea central del pecho y el ombligo se desplazan hacia el lado que se aleja y ese lado se ve más estrecho; cuando se inclina hacia ti, las distancias verticales se acortan.' });
-    if (!vs.tpts) { vs.tpts = {}; for (const k of T_KEYS) vs.tpts[k] = T.tgt[k]; vs.tTouched = false; }
+    const T = torsoGeo(A), vs = vstate(), perfil = enPerfil(T);
+    const out = corrCuerpo(A, perfil ? ['torso'] : ['torso', 'shW', 'hipW']);
+    M.anchos = [];
+    if (S.view === 'back') { out.push(...anchosTorso(A, T)); out.push({ id: 't:espalda', parte: 'Torso de espaldas', texto: 'De espaldas no se ven pezones ni ombligo. Revisa hombros, cintura y caderas; para el pecho usa la vista de frente o de perfil.', st: 'info', at: A.M.midSh, tip: 'En la espalda, los omóplatos van de la 2.ª a la 7.ª costilla; los hoyuelos de Venus marcan las espinas ilíacas posteriores, a la altura del sacro.' }); return out; }
+    if (!perfil && T.con3D && (T.giro > 12 || T.incl > 12)) out.push({ id: 't:escorzo', parte: 'Escorzo del tronco', texto: `Tronco girado ${Math.round(T.giro)}° (el hombro ${T.alejado} se aleja) e inclinado ${Math.round(T.incl)}° ${T.haciaCam ? 'hacia la cámara' : 'alejándose de la cámara'}. Ya ajusté las guías.`, st: 'info', at: A.M.midSh, tip: 'Cuando el tronco gira, la línea central del pecho y el ombligo se desplazan hacia el lado que se aleja y ese lado se ve más estrecho; cuando se inclina hacia ti, las distancias verticales se acortan.' });
+    out.push(...anchosTorso(A, T));
+    const keys = tKeys(T);
+    if (!vs.tpts) vs.tpts = {};
+    for (const k of keys) if (!vs.tpts[k]) vs.tpts[k] = T.tgt[k];
     if (!vs.tTouched) {
-      out.push({ id: 't:marcar', parte: 'Puntos del torso', texto: `Arrastra los 5 puntos morados (pezones, ombligo y cintura) a donde están en tu escultura y te diré cuánto corregir. Las líneas muestran el canon de ${fem() ? 'mujer' : 'hombre'}.`, st: 'info', at: T.tgt.omb, tip: fem() ? 'En la mujer los pezones quedan algo más bajos y separados hacia fuera, la cintura es más alta y estrecha y la pelvis más ancha: el ancho máximo de caderas iguala o supera al de hombros.' : 'En el hombre los pezones quedan a 2 cabezas del cráneo y separados ≈ 1 cabeza; la cintura es poco marcada y está casi a la altura del ombligo; los hombros son claramente más anchos que la cadera.' });
+      out.push({ id: 't:marcar', parte: perfil ? 'Puntos del torso (perfil)' : 'Puntos del torso', texto: perfil ? `De perfil: arrastra los puntos morados al pezón${fem() ? ', al pliegue bajo el pecho' : ''} y al ombligo; te diré si están a la altura correcta.` : `Arrastra los puntos morados a tu escultura: pezones, ombligo y lados de la cintura${fem() ? ', y para cada pecho su borde exterior y su pliegue inferior (así comparo si uno se ve más grande)' : ''}.`, st: 'info', at: T.tgt[perfil ? 'ombP' : 'omb'], tip: fem() ? 'En la mujer los pezones quedan algo más bajos y separados hacia fuera, la cintura es más alta y estrecha y la pelvis más ancha.' : 'En el hombre los pezones quedan a 2 cabezas del cráneo y separados ≈ 1 cabeza; los hombros son claramente más anchos que la cadera.' });
       return out;
     }
     const p = vs.tpts, cm = T.cmPx, tol = 0.06 * T.u * T.fT;
+    const vertical = (k, tipo) => {
+      const al = dot(sub(p[k], T.tgt[k]), T.down);
+      if (Math.abs(al) > tol) out.push({ id: 't:' + k + 'v', parte: T_LAB[k], texto: `Está ${f1(Math.abs(al) * cm)} cm más ${al > 0 ? 'bajo' : 'alto'} que en el canon. ${al > 0 ? 'Súbelo' : 'Bájalo'} hasta la línea punteada.`, st: Math.abs(al) > 2 * tol ? 'bad' : 'warn', at: p[k], voz: `${T_LAB[k]} ${f1(Math.abs(al) * cm)} centímetros más ${al > 0 ? 'bajo' : 'alto'}.`, tip: tipo });
+    };
+    const TIP_PEZ = 'Los pezones están a 2 cabezas del cráneo en el canon masculino; en el femenino, el pecho cae algo más según su volumen.';
+    const TIP_OMB = 'El ombligo está a 3 cabezas del cráneo (canon de 8), un poco por encima de las crestas ilíacas, sobre el eje central.';
+    if (perfil) {
+      vertical('pezP', TIP_PEZ); vertical('ombP', TIP_OMB);
+      if (fem()) {
+        vertical('plgP', 'El pliegue bajo el pecho (surco submamario) queda a unas 2⅓ cabezas del cráneo; cuanto más volumen, más baja el pezón respecto a ese pliegue.');
+        const caida = dot(sub(p.plgP, p.pezP), T.down);
+        if (caida < -0.02 * T.u) out.push({ id: 't:caidaP', parte: 'Pecho (perfil)', texto: 'El pezón queda por debajo del pliegue inferior: el pecho se ve muy caído. Si no es intencional, súbelo o reduce el volumen bajo él.', st: 'warn', at: p.pezP, tip: 'De perfil, el pecho joven tiene el pezón por encima del pliegue y la curva superior es casi recta; la inferior, más llena.' });
+      }
+      return out;
+    }
     for (const k of ['pezL', 'pezR', 'omb']) {
-      const d = sub(p[k], T.tgt[k]), al = dot(d, T.down), la = dot(d, T.perp);
-      if (Math.abs(al) > tol) out.push({ id: 't:' + k + 'v', parte: T_LAB[k], texto: `Está ${f1(Math.abs(al) * cm)} cm más ${al > 0 ? 'bajo' : 'alto'} que en el canon. ${al > 0 ? 'Súbelo' : 'Bájalo'} hasta la línea punteada.`, st: Math.abs(al) > 2 * tol ? 'bad' : 'warn', at: p[k], voz: `${T_LAB[k]} ${f1(Math.abs(al) * cm)} centímetros más ${al > 0 ? 'bajo' : 'alto'}.`, tip: k === 'omb' ? 'El ombligo está a 3 cabezas del cráneo (canon de 8), un poco por encima de la línea de las crestas ilíacas, y siempre sobre el eje central del abdomen.' : 'Los pezones están a 2 cabezas del cráneo en el canon masculino; en el femenino, el pecho cae algo más bajo según el volumen.' });
-      const latTol = (k === 'omb' ? 0.05 : 0.08) * T.u * Math.max(0.5, T.fW);
-      const latObj = 0; // desviación lateral respecto a su objetivo
-      if (Math.abs(la - latObj) > latTol) {
+      vertical(k, k === 'omb' ? TIP_OMB : TIP_PEZ);
+      const la = dot(sub(p[k], T.tgt[k]), T.perp), latTol = (k === 'omb' ? 0.05 : 0.08) * T.u * Math.max(0.5, T.fW);
+      if (Math.abs(la) > latTol) {
         const hacia = k === 'omb' ? (la > 0 ? 'hacia la izquierda de la figura' : 'hacia la derecha de la figura') : ((k === 'pezL') === (la > 0) ? 'hacia fuera' : 'hacia el centro');
-        out.push({ id: 't:' + k + 'h', parte: T_LAB[k], texto: `Desviado ${f1(Math.abs(la) * cm)} cm ${hacia}. ${k === 'omb' ? 'Llévalo al eje central.' : 'Corrige su separación del centro.'}`, st: 'warn', at: p[k], tip: 'Mide con compás desde el eje central (la línea que baja del hueco del cuello al pubis) a cada lado: las distancias deben ser iguales.' });
+        out.push({ id: 't:' + k + 'h', parte: T_LAB[k], texto: `Desviado ${f1(Math.abs(la) * cm)} cm ${hacia}. ${k === 'omb' ? 'Llévalo al eje central.' : 'Corrige su separación del centro.'}`, st: 'warn', at: p[k], tip: 'Mide con compás desde el eje central (del hueco del cuello al pubis) a cada lado: las distancias deben ser iguales.' });
       }
     }
     const wNow = dist(p.cinL, p.cinR), wT = dist(T.tgt.cinL, T.tgt.cinR);
-    if (Math.abs(wNow - wT) > 0.08 * T.u * T.fW) out.push({ id: 't:cinw', parte: 'Cintura', texto: `Mide ${f1(wNow * cm)} cm de ancho y el canon de ${fem() ? 'mujer' : 'hombre'} pide ${f1(wT * cm)} cm. ${wNow > wT ? 'Estréchala' : 'Ensánchala'} ${f1(Math.abs(wNow - wT) * cm)} cm.`, st: Math.abs(wNow - wT) > 0.16 * T.u ? 'bad' : 'warn', at: mid(p.cinL, p.cinR), tip: fem() ? 'La cintura femenina es el punto más estrecho del tronco y queda por encima del ombligo; desde ahí la silueta se abre hacia la pelvis.' : 'En el hombre la cintura es poco marcada: el contorno baja casi recto de las costillas a la cadera, con los oblicuos haciendo un pequeño bulto sobre la cresta ilíaca.' });
+    if (Math.abs(wNow - wT) > 0.08 * T.u * T.fW) out.push({ id: 't:cinw', parte: 'Cintura', texto: `Mide ${f1(wNow * cm)} cm de ancho y el canon de ${fem() ? 'mujer' : 'hombre'} pide ${f1(wT * cm)} cm. ${wNow > wT ? 'Estréchala' : 'Ensánchala'} ${f1(Math.abs(wNow - wT) * cm)} cm.`, st: Math.abs(wNow - wT) > 0.16 * T.u ? 'bad' : 'warn', at: mid(p.cinL, p.cinR), tip: fem() ? 'La cintura femenina es el punto más estrecho del tronco y queda por encima del ombligo.' : 'En el hombre la cintura es poco marcada: el contorno baja casi recto de las costillas a la cadera.' });
     const dh = dot(sub(p.pezL, p.pezR), T.down);
     if (Math.abs(dh) > 0.05 * T.u) out.push({ id: 't:pezsim', parte: 'Pezones', texto: `Están a distinta altura (${f1(Math.abs(dh) * cm)} cm). Si los hombros están nivelados, iguálalos.`, st: 'warn', at: mid(p.pezL, p.pezR), tip: 'Si un brazo se levanta, el pectoral de ese lado sube con él: entonces la diferencia es correcta.' });
+    if (fem() && p.extL && p.plgL) {
+      const wL = dist(p.pezL, p.extL), wR = dist(p.pezR, p.extR), hL = dot(sub(p.plgL, p.pezL), T.down), hR = dot(sub(p.plgR, p.pezR), T.down);
+      if (Math.abs(wL - wR) / Math.max(wL, wR) > 0.12) { const izq = wL > wR; out.push({ id: 't:pechoAncho', parte: 'Pechos', texto: `El pecho ${izq ? 'izquierdo' : 'derecho'} se ve más grande: es ${f1(Math.abs(wL - wR) * cm)} cm más ancho hacia fuera. Iguala los volúmenes (o el otro, si ese es el correcto).`, st: Math.abs(wL - wR) / Math.max(wL, wR) > 0.25 ? 'bad' : 'warn', at: izq ? p.extL : p.extR, tip: 'Compara con compás: del pezón al borde exterior y del pezón al pliegue inferior, en cada lado. Si la figura gira, el pecho que se aleja se ve más estrecho.' }); }
+      if (Math.abs(hL - hR) > 0.05 * T.u) { const izq = hL > hR; out.push({ id: 't:pechoCae', parte: 'Pechos', texto: `El pecho ${izq ? 'izquierdo' : 'derecho'} cae más: su pliegue inferior está ${f1(Math.abs(hL - hR) * cm)} cm más bajo respecto al pezón que en el otro.`, st: 'warn', at: izq ? p.plgL : p.plgR, tip: 'Si un brazo está levantado, el pecho de ese lado sube y se estira: la diferencia es natural. Con los brazos abajo, deben quedar parecidos.' }); }
+      const plgM = (dot(sub(p.plgL, T.tgt.plgL), T.down) + dot(sub(p.plgR, T.tgt.plgR), T.down)) / 2;
+      if (Math.abs(plgM) > 0.1 * T.u) out.push({ id: 't:plgCanon', parte: 'Pliegues bajo el pecho', texto: `Están ${f1(Math.abs(plgM) * cm)} cm más ${plgM > 0 ? 'bajos' : 'altos'} que la línea del canon (${plgM > 0 ? 'pecho más caído o voluminoso' : 'pecho más alto o pequeño'}).`, st: 'info', at: mid(p.plgL, p.plgR), tip: 'Es una guía, no una regla: el volumen y la caída del pecho cambian mucho entre personas y con la edad.' });
+    }
     return out;
   }
+  function etiqueta(q, t, col) { const x = E.ctx; x.font = '600 12px system-ui'; const w = x.measureText(t).width; x.fillStyle = 'rgba(10,10,16,.7)'; x.fillRect(q.x + 4, q.y - 9, w + 8, 18); x.fillStyle = col || '#d8ccff'; x.fillText(t, q.x + 8, q.y + 4); }
+  function dibAnchos() { for (const a of (M.anchos || [])) { const A1 = E.toScr(a.A), B1 = E.toScr(a.B); E.line(A1, B1, 2.5, COL[a.st] || '#fff'); E.circle(A1, 3.5, '#fff'); E.circle(B1, 3.5, '#fff'); etiqueta(B1, a.t, COL[a.st]); } }
   function dibTorso(A) {
-    const T = torsoGeo(A), vs = vstate(), Mm = A.M, sc = E.toScr;
-    // eje central
-    const sh = mul(T.nxy, 0.4 * T.u);
-    const top = add(add(Mm.midSh, mul(T.up, 0.4 * T.u)), sh), bot = add(add(Mm.midHip, mul(T.down, 0.4 * T.u)), sh);
-    E.line(sc(top), sc(bot), 2, LILA, [10, 8]);
-    // contorno del canon (hombros → cintura → caderas)
-    const rowsW = T.G.filter(g => ['Clavículas', 'Cintura', 'Caderas (más ancho)', 'Bajo el pecho'].includes(g[0]));
-    for (const sg of [1, -1]) {
-      const pts = rowsW.map(g => sc(T.at(g[1], sg * g[2])));
-      const x = E.ctx; x.beginPath(); x.strokeStyle = LILA2; x.lineWidth = 3; pts.forEach((q, i) => i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y)); x.stroke();
+    const T = torsoGeo(A), vs = vstate(), Mm = A.M, sc = E.toScr, perfil = enPerfil(T);
+    if (perfil) {
+      E.line(sc(add(Mm.midSh, mul(T.up, 0.4 * T.u))), sc(add(Mm.midHip, mul(T.down, 0.4 * T.u))), 2, LILA, [10, 8]);
+      for (const gg of T.G) { const c = T.atP(gg[1], 0); const a = sc(add(c, mul(T.front, -0.7 * T.u))), b = sc(add(c, mul(T.front, 1.1 * T.u))); E.line(a, b, 1.5, 'rgba(124,196,255,.8)', [8, 6]); etiqueta(b, gg[0]); }
+    } else {
+      const sh = mul(T.nxy, 0.4 * T.u);
+      E.line(sc(add(add(Mm.midSh, mul(T.up, 0.4 * T.u)), sh)), sc(add(add(Mm.midHip, mul(T.down, 0.4 * T.u)), sh)), 2, LILA, [10, 8]);
+      const rowsW = T.G.filter(g => ['Clavículas', 'Cintura', 'Caderas (más ancho)', 'Bajo el pecho'].includes(g[0]));
+      for (const sg of [1, -1]) { const pts = rowsW.map(g => sc(T.at(g[1], sg * g[2]))); const x = E.ctx; x.beginPath(); x.strokeStyle = LILA2; x.lineWidth = 3; pts.forEach((q, i) => i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y)); x.stroke(); }
+      for (const gg of T.G) { const a = sc(T.at(gg[1], -gg[2] - 0.15)), b = sc(T.at(gg[1], gg[2] + 0.15)); E.line(a, b, 1.5, 'rgba(124,196,255,.8)', [8, 6]); E.circle(sc(T.at(gg[1], 0)), 4, LILA); etiqueta(b, gg[0]); }
+      E.line(sc(Mm.shL), sc(Mm.shR), 3, '#7cc4ff'); E.line(sc(Mm.hipL), sc(Mm.hipR), 3, '#7cc4ff');
     }
-    for (const g of T.G) {
-      const a = sc(T.at(g[1], -g[2] - 0.15)), b = sc(T.at(g[1], g[2] + 0.15));
-      E.line(a, b, 1.5, 'rgba(124,196,255,.8)', [8, 6]);
-      E.circle(sc(T.at(g[1], 0)), 4, LILA);
-      E.ctx.font = '600 12px system-ui'; E.ctx.fillStyle = 'rgba(10,10,16,.7)'; const w = E.ctx.measureText(g[0]).width; E.ctx.fillRect(b.x + 4, b.y - 9, w + 8, 18); E.ctx.fillStyle = '#d8ccff'; E.ctx.fillText(g[0], b.x + 8, b.y + 4);
-    }
-    E.line(sc(Mm.shL), sc(Mm.shR), 3, '#7cc4ff'); E.line(sc(Mm.hipL), sc(Mm.hipR), 3, '#7cc4ff');
-    if (vs.tpts) for (const k of T_KEYS) { const q = sc(vs.tpts[k]); E.circle(q, k === M.drag ? 14 : 10, 'rgba(124,92,255,.85)', '#fff'); if (k === M.drag || !vs.tTouched) E.label(q, T_LAB[k], '#d8ccff'); }
+    dibAnchos();
+    if (vs.tpts) for (const k of tKeys(T)) { const pt = vs.tpts[k]; if (!pt) continue; const q = sc(pt), pecho = T_PECHO.includes(k); E.circle(q, k === M.drag ? 14 : pecho ? 8 : 10, pecho ? 'rgba(236,72,153,.85)' : 'rgba(124,92,255,.85)', '#fff'); if (k === M.drag || !vs.tTouched) E.label(q, T_LAB[k], '#d8ccff'); }
+    if (fem() && !perfil && vs.tpts && vs.tpts.extL) for (const [a, b] of [['pezL', 'extL'], ['pezL', 'plgL'], ['pezR', 'extR'], ['pezR', 'plgR']]) E.line(sc(vs.tpts[a]), sc(vs.tpts[b]), 1.5, 'rgba(236,72,153,.7)');
   }
 
   // ======================= PIERNAS Y PIES =======================
@@ -211,10 +291,46 @@
         if (Math.abs(r - 1) > 0.2) out.push({ id: 'p:pie' + lado, parte: `Pie ${lado}.`, texto: `Mide ≈ ${f1(r * C.foot * cmCab)} cm y el canon pide ${f1(C.foot * cmCab)} cm. ${r > 1 ? 'Acórtalo' : 'Alárgalo'} desde la punta (medida aproximada: confírmala con compás).`, st: Math.abs(r - 1) > 0.35 ? 'bad' : 'warn', at: pt(to), tip: TIPS_P.foot });
       }
     }
+    out.push(...anchosPiernas(A));
     if (!out.length) out.push({ id: 'p:info', parte: 'Piernas y pies', texto: 'Piernas y pies dentro del canon desde esta vista. Revisa también de perfil: el pie se mide mejor de lado.', st: 'info', at: A.M.anL || A.M.midHip, tip: TIPS_P.ankle + ' ' + TIPS_P.foot });
     return out;
   }
+  function anchosPiernas(A) {
+    M.anchos = [];
+    const sl = silueta(); if (!sl) return [];
+    if (!adultoT()) return [{ id: 's:pninos', parte: 'Grosor de piernas', texto: 'En bebés y niños el grosor depende mucho de la grasa: no hay un canon fiable. Compara las dos piernas entre sí.', st: 'info', at: A.M.knL || A.M.midHip, tip: 'En los niños, las rodillas y los tobillos casi no se marcan; los muslos son cónicos y blandos.' }];
+    const F = fem(), kc = kComp(), u = A.u, cmCab = S.altura / A.C.H, cm = cmCab / u;
+    const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
+    const NOM = { mus: 'Muslo (arriba)', mid: 'Muslo (mitad)', rod: 'Rodilla', pan: 'Pantorrilla', tob: 'Tobillo' };
+    const TIP = { mus: 'El muslo es más ancho arriba y se afina hacia la rodilla; por fuera, el contorno es más alto y suave; por dentro, el vasto interno abulta justo encima de la rodilla.', mid: 'A media altura del muslo, el contorno exterior es casi recto y el interior más curvo.', rod: 'La rodilla es la parte más estrecha entre muslo y pantorrilla; de frente se ve casi cuadrada.', pan: 'El gemelo interno es más bajo y más abultado; el externo, más alto y plano: el punto más ancho de la pantorrilla está en el primer tercio bajo la rodilla.', tob: 'El tobillo es lo más estrecho de la pierna; el maléolo interno sobresale más arriba que el externo.' };
+    const out = [], medidas = {}; let juntas = false;
+    for (const [h, k, a, lado] of [['hipL', 'knL', 'anL', 'izq'], ['hipR', 'knR', 'anR', 'der']]) {
+      const Hh = A.M[h], K = A.M[k], An = A.M[a]; if (!Hh || !K || !An) continue;
+      const d1 = norm(sub(K, Hh)), d2 = norm(sub(An, K)), p1 = P(-d1.y, d1.x), p2 = P(-d2.y, d2.x), pr = norm(P(-(d1.y + d2.y), d1.x + d2.x));
+      const pts = { mus: [add(Hh, mul(sub(K, Hh), 0.25)), p1], mid: [mid(Hh, K), p1], rod: [K, pr], tob: [add(K, mul(sub(An, K), 0.88)), p2] };
+      for (const [key, [c, dir]] of Object.entries(pts)) {
+        const r = ancho(sl, c, dir, W[key] * kc * u * 0.95); if (!r) continue; if (r.tope) { juntas = true; continue; }
+        medidas[key + lado] = { r, c };
+      }
+      let best = null; for (let t = 0.15; t <= 0.46; t += 0.05) { const c = add(K, mul(sub(An, K), t)), r = ancho(sl, c, p2, W.pan * kc * u * 0.95); if (r && !r.tope && (!best || r.w > best.r.w)) best = { r, c }; }
+      if (best) medidas['pan' + lado] = best;
+    }
+    for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
+      const md = medidas[key + lado]; if (!md) continue;
+      const ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.18 ? 'warn' : 'ok';
+      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st });
+      if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido en la silueta).`, st, at: md.c, tip: TIP[key] });
+    }
+    for (const key of Object.keys(W)) {
+      const a = medidas[key + 'izq'], b = medidas[key + 'der']; if (!a || !b) continue;
+      const dd = Math.abs(a.r.w - b.r.w) / Math.max(a.r.w, b.r.w);
+      if (dd > 0.12) out.push({ id: 's:sim' + key, parte: NOM[key], texto: `${a.r.w > b.r.w ? 'El izquierdo' : 'El derecho'} es ${f1(Math.abs(a.r.w - b.r.w) * cm)} cm más grueso que el otro. Iguálalos si las dos piernas cargan igual.`, st: 'warn', at: a.r.w > b.r.w ? a.c : b.c, tip: 'La pierna que carga el peso tiene los músculos más tensos y marcados, pero el grosor es casi el mismo.' });
+    }
+    if (juntas) out.push({ id: 's:juntas', parte: 'Grosor de piernas', texto: 'Las piernas se tocan en algunas zonas y la silueta se une: ahí no mido el grosor. Mira de perfil o separa visualmente con otra vista.', st: 'info', at: A.M.midHip, tip: 'Con compás puedes medir el grosor de cada pierna en la pieza real a cualquier altura.' });
+    return out;
+  }
   function dibPiernas(A) {
+    dibAnchos();
     const sc = E.toScr, Mm = A.M, C = A.C, G = A.G;
     for (const s of A.segs) if (['thigh', 'shin'].includes(s.ck)) E.line(sc(s.A), sc(s.B), 9, COL[s.st] || '#fff');
     for (const [h, a] of [['hipL', 'anL'], ['hipR', 'anR']]) if (Mm[h] && Mm[a]) E.line(sc(Mm[h]), sc(Mm[a]), 1.5, LILA, [8, 6]);
@@ -329,6 +445,12 @@
       const esc = DEDOS.filter(([n, ch]) => enEscorzo(ch)).map(d => d[0].toLowerCase());
       if (esc.length) out.push({ id: `m:${hi}:escorzo`, parte: `${lab}: dedos en escorzo`, texto: `${esc.join(', ')} ${esc.length > 1 ? 'apuntan' : 'apunta'} hacia la cámara: no doy su largo desde aquí para no confundirte. Gira la mano o mira desde un lado. Las flexiones sí se calculan en 3D.`, st: 'info', at: P(q[9].x, q[9].y), tip: 'En escorzo un dedo se ve corto y sus falanges se superponen. Para modelarlo, piensa en cilindros que se acercan a ti: la uña se ve casi de frente y la punta tapa a la falange media.' });
       const medioEsc = esc.includes('medio');
+      // ancho de la palma (nudillos índice–meñique) frente a su largo; se omite si la palma está de canto
+      { const a = q[0], b = q[5], c = q[17], u1 = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z }, u2 = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
+        const n = { x: u1.y * u2.z - u1.z * u2.y, y: u1.z * u2.x - u1.x * u2.z, z: u1.x * u2.y - u1.y * u2.x }, deCanto = Math.abs(n.z) / (L3(n) || 1) < 0.45;
+        const rw = d3(q[5], q[17]) / d3(q[0], q[9]), ideal = fem() ? 0.65 : 0.68;
+        if (deCanto) out.push({ id: `m:${hi}:canto`, parte: `${lab}: ancho`, texto: 'La palma está de canto a la cámara: no mido su ancho desde aquí. Gira la mano para verla de frente o de dorso.', st: 'info', at: P(q[9].x, q[9].y), tip: 'De canto, la mano se ve como una cuña: gruesa en la base del pulgar y fina en el meñique.' });
+        else if (Math.abs(rw / ideal - 1) > 0.15) out.push({ id: `m:${hi}:ancho`, parte: `${lab}: ancho`, texto: `De nudillo del índice al del meñique mide ${Math.round(rw * 100)}% del largo de la palma; lo habitual es ≈ ${Math.round(ideal * 100)}%. ${rw > ideal ? 'La mano es ancha: estréchala' : 'La mano es estrecha: ensánchala'} un poco.`, st: Math.abs(rw / ideal - 1) > 0.28 ? 'bad' : 'warn', at: mid(P(q[5].x, q[5].y), P(q[17].x, q[17].y)), tip: 'Contando la carne de los bordes, el ancho de la palma es casi igual a su largo (≈ 85%). La mano de la mujer es algo más estrecha y de dedos más finos.' }); }
       const med = flen([9, 10, 11, 12]), palma = d3(q[0], q[9]);
       const rp = med / palma;
       if (!medioEsc && Math.abs(rp / 0.95 - 1) > 0.15) out.push({ id: `m:${hi}:palma`, parte: `${lab}: palma`, texto: `El dedo medio mide ${Math.round(rp * 100)}% del largo de la palma; lo habitual es casi lo mismo (90–100%). ${rp > 1.1 ? 'Los dedos son largos o la palma corta.' : 'Los dedos son cortos o la palma larga.'}`, st: 'warn', at: P(q[9].x, q[9].y), tip: 'La mano se divide en dos mitades casi iguales: la palma (de la muñeca a los nudillos) y el dedo medio.' });
@@ -516,6 +638,25 @@
       if (top && (!M.sug[0] || M.sug[0].it.id !== top.it.id || M.sug[0].pagina !== top.pagina)) { try { top.canvas = await B().imagenDe(top); } catch (e) {} conTexto = ''; }
       else if (top && M.sug[0]) top.canvas = M.sug[0].canvas;
       M.sug = r.filter(x => x.parecido >= 45);
+      const best = M.sug[0];
+      if (best && S.modo === 'torso' && M.autoRef && best.parecido >= 60 && M.autoId !== best.it.id + '#' + best.pagina) superponer(best, true);
+    } catch (e) { console.error(e); }
+  }
+  async function superponer(r, auto) {
+    M.autoId = r.it.id + '#' + r.pagina;
+    try {
+      const c = r.canvas || (r.canvas = await B().imagenDe(r));
+      let pts = null;
+      if (S.modo !== 'rostro' && S.modo !== 'manos') {
+        const res = await window.Escultor.detectPoseOn(c);
+        if (res) { const IDX = window.Escultor.IDX; pts = {}; for (const k in IDX) pts[k] = P(res.lm[IDX[k]].x * c.width, res.lm[IDX[k]].y * c.height); }
+      }
+      window.Escultor.setCalco(c.toDataURL('image/jpeg', 0.9), pts);
+      setTimeout(() => {
+        $('refOp').value = 0.45; $('refOp').dispatchEvent(new Event('input'));
+        if (pts && S.analysis) $('bRefAlign').click();
+        E.flash([[`🗺️ ${auto ? 'Puse encima' : 'Referencia puesta'}: «${r.it.title}${r.pagina ? ' — pág. ' + r.pagina : ''}» (${r.parecido}% parecida)${pts ? ', alineada a hombros y caderas' : ''}. Quítala en Calcar ▸ Ocultar.`, 'ok']], 7000);
+      }, 500);
     } catch (e) { console.error(e); }
   }
   async function abrirParecidas() {
@@ -533,17 +674,18 @@
       for (let i = 0; i < M.sug.length; i++) { const r = M.sug[i]; if (!r.canvas) try { r.canvas = await B().imagenDe(r); } catch (e) {} const cv = box.querySelector(`[data-sg="${i}"]`); if (cv && r.canvas) dibujarThumb(cv, r.canvas); }
     }
     const q = (id) => box.querySelector('#' + id);
-    if (q('rfBuscar')) q('rfBuscar').onclick = () => { $('sRefs').classList.remove('open'); B().abrir('buscar'); const f = { rostro: 'rostro', manos: 'manos', torso: 'anatomia', piernas: 'anatomia', cuerpo: 'cuerpo' }[S.modo]; const ch = document.querySelector(`#libFil [data-f="${f}"]`); if (ch && !ch.classList.contains('on')) ch.click(); };
+    if (q('rfBuscar') && S.modo === 'torso') q('rfBuscar').onclick = () => { $('sRefs').classList.remove('open'); B().abrir('buscar'); $('libQ').value = fem() ? 'torso femenino escultura' : 'torso masculino escultura'; $('libGo').click(); };
+    else if (q('rfBuscar')) q('rfBuscar').onclick = () => { $('sRefs').classList.remove('open'); B().abrir('buscar'); const f = { rostro: 'rostro', manos: 'manos', torso: 'anatomia', piernas: 'anatomia', cuerpo: 'cuerpo' }[S.modo]; const ch = document.querySelector(`#libFil [data-f="${f}"]`); if (ch && !ch.classList.contains('on')) ch.click(); };
     if (q('rfSubir')) q('rfSubir').onclick = () => { $('sRefs').classList.remove('open'); B().abrir('mias'); $('libFiles').click(); };
     if (q('rfCalco')) q('rfCalco').onclick = () => { $('bRefHide').click(); $('sRefs').classList.remove('open'); };
-    box.querySelectorAll('[data-usar]').forEach(b => b.onclick = () => { const r = M.sug[+b.dataset.usar]; if (r.canvas) E.flash([['🗺️ Referencia puesta sobre la cámara. Ajusta la opacidad en Calcar.', 'ok']], 5000), window.Escultor.setCalco(r.canvas.toDataURL('image/jpeg', .9)); $('sRefs').classList.remove('open'); });
+    box.querySelectorAll('[data-usar]').forEach(b => b.onclick = () => { const r = M.sug[+b.dataset.usar]; $('sRefs').classList.remove('open'); superponer(r, false); });
     box.querySelectorAll('[data-abrir]').forEach(b => b.onclick = () => { const r = M.sug[+b.dataset.abrir]; $('sRefs').classList.remove('open'); B().abrir('mias'); if (r.it.kind === 'pdf') B().abrirDetallePDF(r.it, r.pagina); else B().abrirDetalle(r.it); });
   }
 
   // ======================= Puntos arrastrables (torso / orejas) =======================
   function puntosEditables() {
     const vs = vstate();
-    if (S.modo === 'torso' && vs.tpts) return [vs.tpts, T_KEYS, 'tTouched'];
+    if (S.modo === 'torso' && vs.tpts && S.analysis) return [vs.tpts, tKeys(torsoGeo(S.analysis)), 'tTouched'];
     if (S.modo === 'rostro' && vs.fpts && (M.editPts || vs.fTouched)) return [vs.fpts, OREJAS, 'fTouched'];
     return null;
   }
@@ -652,6 +794,8 @@
     if (M.editPts) E.flash([[S.modo === 'rostro' ? 'Arrastra los 4 puntos naranjas al borde superior e inferior de cada oreja.' : 'Arrastra los puntos morados a los pezones, el ombligo y los lados de la cintura de tu escultura.', '']], 6000);
   };
   $('bMas').onclick = () => E.openSheet('sMas');
+  (() => { const b = document.createElement('button'); b.id = 'bAutoRef'; const pinta = () => { b.textContent = (M.autoRef ? '✅' : '⬜') + ' Referencia automática (torso)'; b.classList.toggle('on', M.autoRef); }; pinta();
+    b.onclick = () => { M.autoRef = !M.autoRef; ls.set('escultorAutoRef', M.autoRef); M.autoId = null; pinta(); }; document.querySelector('#sMas .grid3').appendChild(b); })();
   $('hGear').onclick = () => E.openSheet('sSet');
   $('fFull').onclick = () => { const d = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else d.requestFullscreen(); } catch (e) {} };
   $('fFlip').onclick = () => { S.facing = S.facing === 'environment' ? 'user' : 'environment'; if (S.src === 'cam') { E.stopCam(); E.startCam(); } else E.startCam(); };
