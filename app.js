@@ -24,7 +24,7 @@
     pose: null, poseReady: false, poseLoading: false, busy: false,
     lastSpeak: 0, lastMsg: '',
     ref: { tx: 0, ty: 0, s: 1, r: 0, edit: false, shown: true, has: false },
-    sm: {}, focus: null, compact: false,
+    sm: {}, focus: null, compact: false, modo: 'cuerpo', facing: 'environment',
     view: 'front', views: { front: {}, right: {}, left: {}, back: {} }, lines: false, pts: true, selPt: null,
     fuente: 'canon', custom: null,   // proporciones: canon clásico o "mi referencia" 
   };
@@ -112,14 +112,16 @@
     setOn('bCalco', S.ref.has && S.ref.shown);
     setTimeout(() => document.querySelectorAll('[data-for]').forEach(el => el.classList.toggle('on', $(el.dataset.for).classList.contains('on'))), 0);
     if ($('tLines')) { $('tLines').classList.toggle('on', S.lines); $('tPts').classList.toggle('on', S.pts); }
-    $('bMode').innerHTML = S.mode === 'auto' ? '<span class="i">🤖</span>Auto' : '<span class="i">✋</span>Manual';
-    $('bFreeze').innerHTML = S.frozen ? '<span class="i">▶️</span>Seguir' : '<span class="i">⏸️</span>Congelar';
+    $('bMode').textContent = S.mode === 'auto' ? '🤖 Auto (toca: manual)' : '✋ Manual (toca: auto)';
+    $('bFreeze').querySelector('.lbl').textContent = S.frozen ? 'Seguir' : 'Congelar';
+    setOn('bMedir', S.lines);
+    if (window.Modos) Modos.botones();
   }
 
   // ---------- Fuente: cámara / foto ----------
   async function startCam() {
     try {
-      const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       vid.srcObject = st; await vid.play();
       S.src = 'cam'; S.frozen = false; S.snap = null; S.lm = null; S.sm = {}; S.focus = null;
       if (S.mode === 'auto') ensurePose();
@@ -173,14 +175,15 @@
     ensurePose(); if (!S.poseReady || !still) return;
     while (S.busy) await new Promise(r => setTimeout(r, 30));
     S.busy = true;
-    try { await S.pose.send({ image: still }); } catch (e) { console.error(e); }
+    try { S.pose.reset(); S.stillSent = true; await S.pose.send({ image: still }); } catch (e) { console.error(e); }
     S.busy = false;
     if (!S.lm) flash([['No encontré una figura en la foto. Prueba con ✋ Manual y coloca los puntos tú.', 'warn']], 9000);
   }
   async function detectFrame() {
     if (S.busy || !S.poseReady || S.mode !== 'auto' || S.src !== 'cam' || S.frozen || vid.readyState < 2) return;
+    if (S.modo === 'rostro' || S.modo === 'manos') return;
     S.busy = true;
-    try { await S.pose.send({ image: vid }); } catch (e) { console.error(e); }
+    try { if (S.stillSent) { S.pose.reset(); S.stillSent = false; } await S.pose.send({ image: vid }); } catch (e) { console.error(e); }
     S.busy = false;
   }
 
@@ -246,6 +249,7 @@
   let drag = null, labelsUntil = 0;
   cv.addEventListener('pointerdown', (e) => {
     const q = P(e.offsetX, e.offsetY);
+    if (window.Modos && Modos.pointerdown(e, q)) return;
     if (S.mode === 'manual' && S.manual) {
       let best = null, bd = 44;
       for (const k of KEYS) { const d = dist(toScr(S.manual[k]), q); if (d < bd) { bd = d; best = k; } }
@@ -259,8 +263,8 @@
     }
     if (best) { S.focus = best.id; lastCard = 0; S.lastMsg = ''; S.compact = false; }
   });
-  cv.addEventListener('pointermove', (e) => { if (drag) S.manual[drag] = toImg(P(e.offsetX, e.offsetY - 0)); });
-  cv.addEventListener('pointerup', () => { drag = null; });
+  cv.addEventListener('pointermove', (e) => { if (window.Modos && Modos.pointermove(e, P(e.offsetX, e.offsetY))) return; if (drag) S.manual[drag] = toImg(P(e.offsetX, e.offsetY - 0)); });
+  cv.addEventListener('pointerup', () => { drag = null; if (window.Modos) Modos.pointerup(); });
 
   // ---------- Análisis ----------
   function analyze() {
@@ -605,6 +609,7 @@
   const desk = () => window.matchMedia('(min-width: 1000px)').matches;
   function layout() {
     const card = $('card');
+    if (!card) { resize(); return; }
     if (desk()) { if (card.parentNode !== $('pCardSlot')) $('pCardSlot').appendChild(card); }
     else if (card.parentNode !== document.body) document.body.appendChild(card);
     resize();
@@ -612,7 +617,7 @@
   window.addEventListener('resize', layout);
   let lastPanel = 0;
   function renderPanel(A) {
-    const now = performance.now(); if (!desk() || now - lastPanel < 300) return; lastPanel = now;
+    const now = performance.now(); if (!$('pPts') || !desk() || now - lastPanel < 300) return; lastPanel = now;
     const lm = S.lm, M = A && A.M;
     let n = 0, html = '';
     for (const k of KEYS) {
@@ -635,7 +640,7 @@
       (A ? `<div class="kv">Escala<b>${(cmCab / A.u).toFixed(3)} cm/px</b></div><div class="kv">Medida base<b>${A.base}</b></div>` + (A.alturaCab ? `<div class="kv">Figura de pie ≈<b>${A.alturaCab.toFixed(1)} cabezas</b></div>` : '') : '');
     const T = tableHTML(A); $('pMed').innerHTML = T.html; $('pMedRes').innerHTML = T.res;
   }
-  $('pPts').addEventListener('click', (e) => { const el = e.target.closest('.pt'); if (el) { S.selPt = S.selPt === el.dataset.k ? null : el.dataset.k; lastPanel = 0; } });
+  if ($('pPts')) $('pPts').addEventListener('click', (e) => { const el = e.target.closest('.pt'); if (el) { S.selPt = S.selPt === el.dataset.k ? null : el.dataset.k; lastPanel = 0; } });
 
   function paintViews() {
     document.querySelectorAll('#views .tab').forEach(b => {
@@ -663,8 +668,7 @@
     paintViews(); refreshButtons(); lastPanel = 0;
   }
   document.querySelectorAll('#views .tab').forEach(b => b.onclick = () => switchView(b.dataset.v));
-  $('tLines').onclick = () => { S.lines = !S.lines; refreshButtons(); };
-  $('tPts').onclick = () => { S.pts = !S.pts; refreshButtons(); };
+  $('bMedir').onclick = () => { S.lines = !S.lines; refreshButtons(); };
   document.querySelectorAll('[data-for]').forEach(el => el.addEventListener('click', () => $(el.dataset.for).click()));
   document.querySelectorAll('[data-act="ayuda"]').forEach(el => el.onclick = () => openSheet('sHelp'));
 
@@ -677,16 +681,14 @@
     if (has) {
       if (S.mode === 'manual' && !S.manual) seedManual();
       A = analyze(); S.analysis = A;
-      if (A && S.ghost) drawGhost(A);
-      if (A) drawMeasured(A);
-      if (S.plumb) info = info.concat(drawPlumb(A));
-      if (A) {
-        updateCard(A);
-      } else if (S.mode === 'auto') {
-        cardMsg(S.poseLoading ? '⏳ Cargando detector…' : '🔎 Buscando la figura…', S.poseLoading ? 'La primera vez tarda unos segundos.' : 'Encuadra la figura completa, de la cabeza a los pies, con buena luz.', '#ffca28');
+      if (S.modo === 'cuerpo') {
+        if (A && S.ghost) drawGhost(A);
+        if (A) drawMeasured(A);
       }
-    }
-    if (!has) $('card').style.display = 'none';
+      if (window.Modos) Modos.dibujar(A);
+      if (S.plumb) info = info.concat(drawPlumb(S.modo === 'rostro' || S.modo === 'manos' ? null : A));
+    } else S.analysis = null;
+    if (window.Modos) Modos.tick(A, has);
     renderTable(A); renderPanel(A);
     if (flashMsg && performance.now() < flashMsg.until) info = flashMsg.list.concat(info);
     pills(info.filter(i => i[0]).slice(0, 3));
@@ -694,10 +696,7 @@
   }
 
   // ---------- Botones ----------
-  $('cPrev').onclick = () => step(-1);
-  $('cNext').onclick = () => step(1);
-  $('cHelp').onclick = () => openSheet('sHelp');
-  $('cTitle').onclick = () => { S.compact = !S.compact; lastCard = 0; };
+  $('bHelp').onclick = () => openSheet('sHelp');
   try { if (!localStorage.getItem('escultorAyuda')) { setTimeout(() => openSheet('sHelp'), 600); localStorage.setItem('escultorAyuda', '1'); } } catch (e) {}
 
   // ---------- Mi referencia: proporciones tomadas de una imagen ----------
@@ -751,7 +750,7 @@
     if (!S.poseReady) { $('reMsg').textContent = 'No se pudo cargar el detector. Coloca los puntos a mano.'; reSeed(); return; }
     while (S.busy) await new Promise(r => setTimeout(r, 30));
     S.busy = true; S.route = 'ref'; RE.lm = null; RE.world = null;
-    try { await S.pose.send({ image: RE.img }); } catch (e) { console.error(e); }
+    try { S.pose.reset(); S.stillSent = true; await S.pose.send({ image: RE.img }); } catch (e) { console.error(e); }
     S.route = null; S.busy = false; S.sm = {};
     const ok = RE.lm && [11, 12, 23, 24].every(i => (RE.lm[i].visibility ?? 1) > 0.4);
     if (!ok) RE.lm = null;
@@ -912,6 +911,13 @@
   requestAnimationFrame(frame);
   // API de prueba
   window.__escultor = { S, analyze };
+  // API para modos.js
+  window.EscAPI = {
+    S, ctx, toScr, toImg, line, circle, label, arrow, canonActual, say, explicar, correcciones, COL, NOMBRE, flash, openSheet, refreshButtons, startCam, stopCam, detectStill, ensurePose, seedManual, PCOL, KLABEL, VNAME,
+    get fit() { return fit; }, get cw() { return cw; }, get ch() { return ch; }, get vid() { return vid; },
+    fuente: () => (S.frozen && S.snap) ? S.snap : (S.src === 'cam' ? (vid.readyState >= 2 ? vid : null) : (S.src === 'foto' ? S.img : null)),
+    poseState: () => ({ ready: S.poseReady, loading: S.poseLoading }),
+  };
   // API para la Biblioteca
   async function detectPoseOn(img) {
     ensurePose();
@@ -919,7 +925,7 @@
     if (!S.poseReady) return null;
     while (S.busy) await new Promise(r => setTimeout(r, 30));
     S.busy = true; S.route = 'lib'; S.libRes = null;
-    try { await S.pose.send({ image: img }); } catch (e) { console.error(e); }
+    try { S.pose.reset(); S.stillSent = true; await S.pose.send({ image: img }); } catch (e) { console.error(e); }
     S.route = null; S.busy = false; S.sm = {};
     const r = S.libRes; S.libRes = null;
     return r && r.poseLandmarks ? { lm: r.poseLandmarks, world: r.poseWorldLandmarks } : null;

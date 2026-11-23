@@ -12,8 +12,21 @@
   // ---------------- Traducción simple de búsquedas (las fuentes indexan sobre todo en inglés) ----------------
   const FRASES = [['figura humana', 'human figure'], ['de perfil', 'profile'], ['de pie', 'standing'], ['cerrada en puno', 'fist'], ['en puno', 'fist'], ['de espaldas', 'back view'], ['tres cuartos', 'three quarter'], ['busto clasico', 'classical bust'], ['vista lateral', 'side view']];
   const DIC = { mano: 'hand', manos: 'hands', rostro: 'face', cara: 'face', rostros: 'faces', perfil: 'profile', puno: 'fist', espalda: 'back', sentado: 'sitting', sentada: 'sitting', busto: 'bust', escultura: 'sculpture', esculturas: 'sculptures', estatua: 'statue', nariz: 'nose', ojo: 'eye', ojos: 'eyes', ceja: 'eyebrow', cejas: 'eyebrows', oreja: 'ear', orejas: 'ears', boca: 'mouth', labios: 'lips', musculo: 'muscle', musculos: 'muscles', anatomia: 'anatomy', masculino: 'male', femenino: 'female', hombre: 'man', mujer: 'woman', nino: 'child', nina: 'girl', bebe: 'baby', anciano: 'old man', anciana: 'old woman', frontal: 'front', frente: 'front', tristeza: 'sadness', triste: 'sad', alegria: 'joy', ira: 'anger', expresion: 'expression', gesto: 'gesture', gestos: 'gestures', esfera: 'sphere', bola: 'ball', copa: 'cup', vaso: 'glass', dedos: 'fingers', dedo: 'finger', flexionados: 'bent', flexionado: 'bent', cerrada: 'closed', abierta: 'open', sosteniendo: 'holding', sujetando: 'holding', agarrando: 'grasping', cuerpo: 'body', brazo: 'arm', brazos: 'arms', pierna: 'leg', piernas: 'legs', pie: 'foot', pies: 'feet', torso: 'torso', pose: 'pose', poses: 'poses', acostado: 'lying', acostada: 'lying', craneo: 'skull', esqueleto: 'skeleton', clasico: 'classical', clasica: 'classical', marmol: 'marble', bronce: 'bronze', griego: 'greek', romano: 'roman', renacimiento: 'renaissance', desnudo: 'nude', modelo: 'model', cuello: 'neck', hombro: 'shoulder', hombros: 'shoulders', rodilla: 'knee', codo: 'elbow', mandibula: 'jaw', menton: 'chin', pelo: 'hair', cabello: 'hair', cabeza: 'head', torax: 'chest', pecho: 'chest', abdomen: 'abdomen', caballo: 'horse', perro: 'dog', gato: 'cat', leon: 'lion', toro: 'bull', ave: 'bird', centauro: 'centaur', minotauro: 'minotaur', sirena: 'mermaid', satiro: 'satyr' };
+  // Términos en chino (simplificado y tradicional más comunes)
+  const ZH = { '雕塑': 'sculpture', '雕像': 'statue', '半身像': 'bust', '胸像': 'bust', '人体': 'human body', '人體': 'human body', '解剖': 'anatomy', '解剖学': 'anatomy', '解剖學': 'anatomy', '肌肉': 'muscles', '骨骼': 'skeleton', '头骨': 'skull', '頭骨': 'skull', '头': 'head', '頭': 'head', '脸': 'face', '臉': 'face', '面部': 'face', '侧面': 'profile', '側面': 'profile', '正面': 'front', '眼睛': 'eyes', '眼': 'eye', '眉毛': 'eyebrows', '鼻子': 'nose', '鼻': 'nose', '嘴': 'mouth', '嘴唇': 'lips', '耳朵': 'ear', '耳': 'ear', '下巴': 'chin', '手': 'hand', '手指': 'fingers', '拳头': 'fist', '拳頭': 'fist', '握': 'holding', '拿着': 'holding', '拿著': 'holding', '球': 'sphere', '杯子': 'cup', '杯': 'cup', '脚': 'foot', '腳': 'foot', '足': 'foot', '腿': 'leg', '膝盖': 'knee', '膝蓋': 'knee', '手臂': 'arm', '臂': 'arm', '肩膀': 'shoulder', '躯干': 'torso', '軀幹': 'torso', '胸部': 'chest', '背部': 'back', '背': 'back', '腰': 'waist', '男性': 'male', '男人': 'man', '男': 'male', '女性': 'female', '女人': 'woman', '女': 'female', '儿童': 'child', '兒童': 'child', '婴儿': 'baby', '嬰兒': 'baby', '坐': 'sitting', '坐着': 'sitting', '站': 'standing', '站立': 'standing', '躺': 'lying', '姿势': 'pose', '姿勢': 'pose', '表情': 'expression', '悲伤': 'sad', '悲傷': 'sad', '微笑': 'smile', '古典': 'classical', '大理石': 'marble', '青铜': 'bronze', '青銅': 'bronze', '希腊': 'greek', '希臘': 'greek', '罗马': 'roman', '羅馬': 'roman', '裸体': 'nude', '裸體': 'nude', '马': 'horse', '馬': 'horse', '狮子': 'lion', '獅子': 'lion' };
+  const ZH_KEYS = Object.keys(ZH).sort((a, b) => b.length - a.length);
+  const esChino = (q) => /[\u3400-\u9fff]/.test(q);
+  function traducirChino(q) {
+    const out = []; let i = 0;
+    while (i < q.length) {
+      const k = ZH_KEYS.find(k => q.startsWith(k, i));
+      if (k) { out.push(ZH[k]); i += k.length; } else { if (/[a-z0-9]/i.test(q[i])) { let j = i; while (j < q.length && /[a-z0-9]/i.test(q[j])) j++; out.push(q.slice(i, j)); i = j; } else i++; }
+    }
+    return out.join(' ');
+  }
   const VACIAS = new Set(['de', 'la', 'el', 'con', 'en', 'una', 'un', 'los', 'las', 'del', 'y', 'a', 'al', 'por', 'para']);
   function traducir(q) {
+    if (esChino(q)) return traducirChino(q);
     let t = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     for (const [a, b] of FRASES) t = t.split(a).join(b);
     return t.split(/\s+/).filter(w => w && !VACIAS.has(w)).map(w => DIC[w] || w).join(' ');
@@ -115,6 +128,120 @@
     try { const im = await cargar(it); const c = aCanvas(im, 2000); return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)); } catch (e) { return null; }
   }
 
+  // ---------------- PDF (pdf.js, alojado en la app) ----------------
+  let pdfLib = null;
+  async function pdfjs() {
+    if (pdfLib) return pdfLib;
+    await loadScript('pdf/pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf/pdf.worker.min.js';
+    return (pdfLib = window.pdfjsLib);
+  }
+  const pdfDocs = new Map();
+  async function abrirPDF(it) {
+    if (pdfDocs.has(it.id)) return pdfDocs.get(it.id);
+    const lib = await pdfjs();
+    const doc = await lib.getDocument({ data: new Uint8Array(await it.blob.arrayBuffer()) }).promise;
+    pdfDocs.set(it.id, doc); return doc;
+  }
+  async function paginaCanvas(it, n, maxLado) {
+    const doc = await abrirPDF(it), pg = await doc.getPage(n);
+    const v1 = pg.getViewport({ scale: 1 }), k = (maxLado || 1400) / Math.max(v1.width, v1.height);
+    const vp = pg.getViewport({ scale: k });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    await pg.render({ canvasContext: x, viewport: vp }).promise;
+    return c;
+  }
+  const thumbCache = new Map();
+  const thumbURL = (it) => { if (it.kind !== 'pdf') return blobURL(it); if (!it.thumbBlob) return null; if (!thumbCache.has(it.id)) thumbCache.set(it.id, URL.createObjectURL(it.thumbBlob)); return thumbCache.get(it.id); };
+  const toBlob = (c, t, q) => new Promise(r => c.toBlob(r, t || 'image/jpeg', q || 0.9));
+
+  // ---------------- Huellas de postura (para encontrar referencias parecidas) ----------------
+  // Cuerpo: ángulo de cada segmento respecto al eje del tronco (independiente de tamaño y giro de la imagen).
+  const SEGS_D = [[11, 13], [13, 15], [12, 14], [14, 16], [23, 25], [25, 27], [24, 26], [26, 28], [11, 12], [23, 24]];
+  function descPose(lm, W, H) {
+    if (!lm) return null;
+    const P2 = (i) => ({ x: lm[i].x * W, y: lm[i].y * H, v: lm[i].visibility ?? 1 });
+    const ms = { x: (P2(11).x + P2(12).x) / 2, y: (P2(11).y + P2(12).y) / 2 }, mh = { x: (P2(23).x + P2(24).x) / 2, y: (P2(23).y + P2(24).y) / 2 };
+    const ax = Math.atan2(ms.y - mh.y, ms.x - mh.x);
+    const a = SEGS_D.map(([i, j]) => { const A = P2(i), B = P2(j); if (A.v < 0.4 || B.v < 0.4) return null; return Math.atan2(B.y - A.y, B.x - A.x) - ax; });
+    if (a.filter(x => x !== null).length < 5) return null;
+    return a;
+  }
+  const angDiff = (a, b) => { let d = Math.abs(a - b) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
+  function distPose(a, b) {
+    const espejo = (v) => [v[2], v[3], v[0], v[1], v[6], v[7], v[4], v[5], v[8], v[9]].map(x => x === null ? null : Math.PI - x); // misma pose vista en espejo
+    const d = (u, v) => { let s = 0, n = 0; for (let i = 0; i < u.length; i++) if (u[i] !== null && v[i] !== null) { s += angDiff(u[i], v[i]); n++; } return n >= 5 ? s / n : Infinity; };
+    return Math.min(d(a, b), d(a, espejo(b)));
+  }
+  function descFace(lm) {
+    if (!lm) return null;
+    const p = (i) => lm[i];
+    const yaw = (p(1).x - p(234).x) / ((p(454).x - p(234).x) || 1e-6) - 0.5;
+    const roll = Math.atan2(p(263).y - p(33).y, p(263).x - p(33).x);
+    const eyeY = (p(33).y + p(263).y) / 2, pitch = (p(1).y - eyeY) / ((p(152).y - eyeY) || 1e-6);
+    return [yaw * 2, roll, pitch];
+  }
+  const distFace = (a, b) => Math.abs(a[0] - b[0]) * 1.4 + angDiff(a[1], b[1]) + Math.abs(a[2] - b[2]) * 1.5;
+  function descHand(lm) {
+    if (!lm) return null;
+    const ch = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [0, 9, 10, 11, 12], [0, 13, 14, 15, 16], [0, 17, 18, 19, 20]], out = [];
+    for (const c of ch) for (let k = 1; k < 4; k++) out.push(180 - ang3(lm[c[k - 1]], lm[c[k]], lm[c[k + 1]]));
+    return out;
+  }
+  const distHand = (a, b) => a.reduce((s, x, i) => s + Math.abs(x - b[i]), 0) / a.length / 57.3;
+  async function huellas(canvas) {
+    const W = canvas.width, H = canvas.height, out = {};
+    try { const r = await ESC().detectPoseOn(canvas); if (r) out.pose = descPose(r.lm, W, H); } catch (e) {}
+    try { const s = await solucion('face'); const r = await enCola(() => s.run(canvas)); const lm = r && r.multiFaceLandmarks && r.multiFaceLandmarks[0]; if (lm) out.face = descFace(lm); } catch (e) {}
+    try { const s = await solucion('hand'); const r = await enCola(() => s.run(canvas)); const lm = r && r.multiHandLandmarks && r.multiHandLandmarks[0]; if (lm) out.hand = descHand(lm.map(q => ({ x: q.x * W, y: q.y * H, z: q.z * W }))); } catch (e) {}
+    return out;
+  }
+  // Indexado en segundo plano (imágenes y cada página de los PDF)
+  const cola = []; let indexando = false;
+  function indexar(it) { if (!cola.find(x => x.id === it.id)) cola.push(it); if (!indexando) procesarCola(); }
+  async function procesarCola() {
+    indexando = true;
+    while (cola.length) {
+      const it0 = cola.shift();
+      const it = (await tx('readonly', st => st.get(it0.id))) || it0;
+      try {
+        if (it.kind === 'pdf') {
+          const doc = await abrirPDF(it); const n = Math.min(doc.numPages, 400);
+          it.paginas = it.paginas || [];
+          for (let k = it.paginas.length + 1; k <= n; k++) {
+            const c = await paginaCanvas(it, k, 900);
+            it.paginas.push(Object.assign({ n: k }, await huellas(c)));
+            progreso(`📄 Revisando «${it.title}»: página ${k} de ${n}`);
+            if (k % 5 === 0 || k === n) await dbPut(it);
+          }
+          it.indexado = true; await dbPut(it);
+        } else if (it.kind === 'img' && it.blob && !it.indexado) {
+          const im = await loadImg(URL.createObjectURL(it.blob));
+          it.huella = await huellas(aCanvas(im, 900)); it.indexado = true; await dbPut(it);
+        }
+      } catch (e) { console.error('indexar', e); }
+    }
+    indexando = false; progreso('');
+  }
+  function progreso(t) { const n = $('libProg'); if (!n) return; n.textContent = t; n.style.display = t ? 'block' : 'none'; }
+  // Buscar las referencias guardadas más parecidas a lo que ve la cámara
+  async function parecidas(tipo, desc, n) {
+    if (!desc) return [];
+    await recargarGuardadas();
+    const f = { pose: distPose, face: distFace, hand: distHand }[tipo], res = [];
+    for (const it of L.saved) {
+      if (it.kind === 'pdf') for (const pg of (it.paginas || [])) { if (pg[tipo]) res.push({ it, pagina: pg.n, d: f(desc, pg[tipo]) }); }
+      else if (it.huella && it.huella[tipo]) res.push({ it, pagina: 0, d: f(desc, it.huella[tipo]) });
+    }
+    return res.filter(r => isFinite(r.d)).sort((a, b) => a.d - b.d).slice(0, n || 3).map(r => Object.assign(r, { parecido: Math.max(0, Math.round(100 - r.d * 100)) }));
+  }
+  async function imagenDe(r) { // canvas de una referencia (o página de PDF)
+    if (r.it.kind === 'pdf') return paginaCanvas(r.it, r.pagina, 1600);
+    return aCanvas(await cargar(r.it), 1600);
+  }
+  async function indexarPendientes() { await recargarGuardadas(); for (const it of L.saved) if (!it.indexado && (it.blob || it.kind === 'pdf')) indexar(it); }
+
   // ---------------- Detectores (rostro / manos se cargan solo al usarlos) ----------------
   const SOL = {};
   const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
@@ -127,7 +254,7 @@
       else { await loadScript('mp/face/face_mesh.js'); m = new FaceMesh({ locateFile: f => 'mp/face/' + f }); m.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.35, minTrackingConfidence: 0.35 }); }
       let last = null; m.onResults(r => { last = r; });
       await m.initialize();
-      return { run: async (img) => { last = null; try { m.reset(); } catch (e) {} await m.send({ image: img }); return last; } };
+      return { run: async (img, keep) => { last = null; if (!keep) { try { m.reset(); } catch (e) {} } await m.send({ image: img }); return last; } };
     })();
     SOL[kind].catch(() => { delete SOL[kind]; });
     return SOL[kind];
@@ -298,7 +425,7 @@
   const L = { tab: 'buscar', filtro: null, fuentes: { wm: true, ov: true }, res: [], saved: [], colFiltro: 'Todas', cur: null, an: null, anOpt: { points: true, lines: true }, cmp: [] };
   const KIND_TXT = { body: 'Cuerpo', face: 'Rostro', hand: 'Manos' };
 
-  function abrir(tab) { $('lib').classList.add('open'); ESC() && ESC().closeSheets(); setTab(tab || L.tab); }
+  function abrir(tab, col) { $('lib').classList.add('open'); ESC() && ESC().closeSheets(); if (col) L.colFiltro = col; setTab(tab || L.tab); }
   function cerrar() { $('lib').classList.remove('open'); }
   function setTab(t) {
     L.tab = t;
@@ -310,8 +437,8 @@
   }
 
   function tarjeta(it, saved) {
-    const src = saved ? (blobURL(it) || it.thumb) : it.thumb;
-    return `<div class="lcard" data-id="${esc(it.id)}"><div class="lth">${src ? `<img loading="lazy" src="${esc(src)}" alt="">` : ''}${it.kind === '3d' ? '<span class="l3d">3D</span>' : ''}</div>
+    const src = saved ? (thumbURL(it) || it.thumb) : it.thumb;
+    return `<div class="lcard" data-id="${esc(it.id)}"><div class="lth">${src ? `<img loading="lazy" src="${esc(src)}" alt="">` : ''}${it.kind === '3d' ? '<span class="l3d">3D</span>' : it.kind === 'pdf' ? `<span class="l3d">PDF · ${it.pages || '?'} pág.</span>` : ''}</div>
       <div class="lmeta"><b>${esc(it.title)}</b><span>${esc(it.author)}</span><span class="llic">${esc(it.license)} · ${esc(String(it.source).split(' · ')[0])}</span></div></div>`;
   }
 
@@ -321,9 +448,11 @@
     const q = [traducir(q0), f && f.en].filter(Boolean).join(' ').trim();
     if (!q) { $('libEstado').textContent = 'Escribe qué buscas o elige un filtro.'; return; }
     const es3d = L.filtro === 'm3d';
-    $('libEstado').textContent = `Buscando «${q}» en ${es3d ? 'Sketchfab' : [L.fuentes.wm && 'Wikimedia Commons', L.fuentes.ov && 'Openverse'].filter(Boolean).join(' y ')}…`;
+    if (esChino(q0)) $('libEstado').dataset.zh = q0;
+    $('libEstado').textContent = (esChino(q0) ? `中文 «${q0}» → ` : '') + `Buscando «${q}» en ${es3d ? 'Sketchfab' : [L.fuentes.wm && 'Wikimedia Commons', L.fuentes.ov && 'Openverse'].filter(Boolean).join(' y ')}…`;
     $('libGrid').innerHTML = '';
     const tareas = es3d ? [buscarSketchfab(q)] : [L.fuentes.wm ? buscarWikimedia(q) : Promise.resolve([]), L.fuentes.ov ? buscarOpenverse(q) : Promise.resolve([])];
+    if (!es3d && esChino(q0) && L.fuentes.wm) tareas.push(buscarWikimedia(q0)); // también con el texto original en chino
     const rs = await Promise.allSettled(tareas);
     const ok = rs.filter(r => r.status === 'fulfilled').map(r => r.value);
     const fallos = rs.filter(r => r.status === 'rejected').length;
@@ -350,9 +479,15 @@
   async function guardarPropias(files) {
     let n = 0;
     for (const f of files) {
-      if (!f.type.startsWith('image/')) continue;
+      const esPDF = f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+      if (!f.type.startsWith('image/') && !esPDF) continue;
       const col = L.colFiltro !== 'Todas' && !L.colFiltro.startsWith('📁 ') ? [L.colFiltro] : [];
-      await dbPut({ id: 'own:' + Date.now() + ':' + Math.random().toString(36).slice(2, 7), kind: 'img', title: f.name || 'Imagen pegada', author: 'Tú', license: 'Propia', source: 'Subida desde tu dispositivo', blob: f, collections: col, project: L.colFiltro.startsWith('📁 ') ? L.colFiltro.slice(3) : '', added: Date.now() });
+      const it = { id: 'own:' + Date.now() + ':' + Math.random().toString(36).slice(2, 7), kind: esPDF ? 'pdf' : 'img', title: f.name || 'Imagen pegada', author: 'Tú', license: 'Propia', source: esPDF ? 'PDF subido desde tu dispositivo' : 'Subida desde tu dispositivo', blob: f, collections: col, project: L.colFiltro.startsWith('📁 ') ? L.colFiltro.slice(3) : (window.Modos ? Modos.proyecto() : ''), added: Date.now() };
+      if (esPDF) {
+        try { const doc = await abrirPDF(it); it.pages = doc.numPages; it.thumbBlob = await toBlob(await paginaCanvas(it, 1, 500)); }
+        catch (e) { aviso('No se pudo abrir el PDF «' + f.name + '».'); continue; }
+      }
+      await dbPut(it); indexar(it);
       n++;
     }
     if (n) { if (L.tab !== 'mias') setTab('mias'); else pintarMias(); }
@@ -367,6 +502,7 @@
     const d = L.cur;
     const kindSug = (L.filtro && FILTROS[L.filtro] && FILTROS[L.filtro].kind) || ((d.collections || []).includes('Mis rostros') ? 'face' : (d.collections || []).includes('Mis manos') ? 'hand' : 'body');
     let vis;
+    if (d.kind === 'pdf') { abrirDetallePDF(d, saved); return; }
     if (d.kind === '3d') vis = `<div id="sfBox"><iframe id="sfFrame" title="Visor 3D" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen></iframe></div>`;
     else vis = `<img id="detImg" src="${esc(blobURL(d) || d.full || d.thumb)}" alt="" onerror="this.onerror=null;this.src='${esc(d.thumb || '')}'">`;
     $('libDetBody').innerHTML = `
@@ -407,6 +543,33 @@
     };
     if ($('dCap')) $('dCap').onclick = capturar3D;
   }
+  async function abrirDetallePDF(d, saved, pag) {
+    L.cur = d; L.pag = pag || L.pag && L.pagDe === d.id && L.pag || 1; L.pagDe = d.id;
+    $('libDetBody').innerHTML = `
+      <div class="dvis" style="flex-direction:column"><canvas id="pdfCv" style="max-width:100%;max-height:60vh;background:#fff"></canvas>
+        <div class="srow" style="justify-content:center;padding:8px"><button class="chip" id="pPrev">◀</button><span class="note" id="pNum" style="align-self:center"></span><button class="chip" id="pNext">▶</button></div></div>
+      <div class="dinfo"><h3>${esc(d.title)}</h3>
+        <div class="kvs"><div><span>Tipo</span>PDF · ${d.pages || '?'} páginas</div><div><span>Origen</span>${esc(d.source)}</div>
+        <div><span>Parecidos</span>${d.indexado ? 'páginas revisadas ✓' : `revisando… (${(d.paginas || []).length}/${d.pages || '?'})`}</div></div>
+        <button class="big" id="pUse">🗺️ Usar esta página sobre la cámara</button>
+        <button class="big sec" id="pMk">📄 Convertir esta página en referencia (para analizar o comparar)</button>
+        <button class="big sec" id="dSave">🗂️ Cambiar colecciones</button>
+        <button class="big sec danger" id="dDel">🗑️ Eliminar PDF</button>
+        <p class="note small">La app revisa cada página buscando figuras, rostros y manos. Mientras esculpes te sugerirá las páginas que más se parezcan a tu pieza.</p></div>`;
+    $('libDet').classList.add('open');
+    const pintarPag = async () => { $('pNum').textContent = `Página ${L.pag} de ${d.pages}`; const c = await paginaCanvas(d, L.pag, 1400); const cv = $('pdfCv'); cv.width = c.width; cv.height = c.height; cv.getContext('2d').drawImage(c, 0, 0); };
+    pintarPag();
+    $('pPrev').onclick = () => { if (L.pag > 1) { L.pag--; pintarPag(); } };
+    $('pNext').onclick = () => { if (L.pag < d.pages) { L.pag++; pintarPag(); } };
+    $('pUse').onclick = async () => { const c = await paginaCanvas(d, L.pag, 2000); ESC().setCalco(c.toDataURL('image/jpeg', .92)); cerrarTodo(); };
+    $('pMk').onclick = async () => {
+      const c = await paginaCanvas(d, L.pag, 2000);
+      const it = { id: 'pdfp:' + Date.now(), kind: 'img', title: `${d.title} — pág. ${L.pag}`, author: d.author, license: d.license, source: `Página ${L.pag} del PDF «${d.title}»`, blob: await toBlob(c), collections: d.collections || [], project: d.project || '', added: Date.now() };
+      await dbPut(it); indexar(it); aviso('📄 Página convertida en referencia.'); abrirDetalle(it);
+    };
+    $('dSave').onclick = () => dialogoGuardar(d, saved, 'body');
+    $('dDel').onclick = async (e) => { if (e.target.dataset.c !== '1') { e.target.dataset.c = '1'; e.target.textContent = '¿Seguro? Toca otra vez para eliminar'; return; } await dbDel(d.id); pdfDocs.delete(d.id); $('libDet').classList.remove('open'); pintarMias(); };
+  }
   function aviso(t) { const n = $('libAviso'); n.textContent = t; n.classList.add('show'); clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove('show'), 5000); }
   function cerrarTodo() { $('libDet').classList.remove('open'); $('libAn').classList.remove('open'); cerrar(); }
 
@@ -426,7 +589,7 @@
       const it = Object.assign({}, d, { collections: cols, project: proj, added: d.added || Date.now() });
       if (!saved && !it.blob && it.kind !== '3d') it.blob = await aBlob(d);
       if (it.kind === '3d' && !it.blob && it.thumb) { try { const r = await fetch(it.thumb); if (r.ok) it.blob = await r.blob(); } catch (e) {} }
-      await dbPut(it);
+      await dbPut(it); indexar(it);
       $('sOk').disabled = false; $('sOk').textContent = 'Guardar';
       $('libSave').classList.remove('open');
       aviso(it.blob || it.kind === '3d' ? '⭐ Guardada con su autor y licencia.' : 'Guardada, pero la fuente no permite copiar la imagen: solo se verá con conexión.');
@@ -531,5 +694,6 @@
     document.querySelectorAll('[data-act="biblio"]').forEach(b => b.onclick = () => abrir('buscar'));
   }
   init();
-  window.Biblioteca = { abrir, traducir, _L: L, _analizar: analizar };
+  window.Biblioteca = { abrir, cerrar, traducir, _L: L, _analizar: analizar, sol: solucion, enCola, descPose, descFace, descHand, parecidas, imagenDe, indexar, abrirDetalle: (it) => abrirDetalle(it), abrirDetallePDF: (it, p) => abrirDetallePDF(it, true, p), aviso, dbAll };
+  setTimeout(indexarPendientes, 4000);
 })();
