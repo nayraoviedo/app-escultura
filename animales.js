@@ -39,6 +39,87 @@
       union: true,
       med: [['Torso (barbilla→ombligo)', 'hBar', 'hOmb', 2.0, 'd', 'El torso es humano.'], ['Muslo de cabra', 'cad', 'rod', 1.6, 'd', 'El muslo caprino es corto y musculoso.'], ['Caña (rodilla→corvejón)', 'rod', 'corv', 1.6, 'd', 'Esta parte va hacia atrás: es la pata trasera de la cabra.'], ['Pie (corvejón→pezuña)', 'corv', 'pez', 1.4, 'd', 'El "talón" (corvejón) queda alto; el sátiro camina sobre la pezuña.']] },
   };
+
+  // ---------- plantillas base ----------
+  const CUERPO_H = (sinCabeza) => (sinCabeza ? [] : [['hCab', 'Cabeza (arriba)', .5, 0], ['hBar', 'Barbilla', .5, .13]]).concat([
+    ['hHomI', 'Hombro izq.', .62, .2], ['hHomD', 'Hombro der.', .38, .2], ['munI', 'Mano izq.', .7, .52], ['munD', 'Mano der.', .3, .52],
+    ['hOmb', 'Ombligo', .5, .42], ['hPub', 'Entrepierna', .5, .52], ['rodI', 'Rodilla izq.', .56, .75], ['rodD', 'Rodilla der.', .44, .75], ['pieI', 'Pie izq. (suelo)', .56, .98], ['pieD', 'Pie der. (suelo)', .44, .98]]);
+  const HUESOS_H = [['hHomI', 'hHomD'], ['hHomI', 'munI'], ['hHomD', 'munD'], ['hHomI', 'hOmb'], ['hHomD', 'hOmb'], ['hOmb', 'hPub'], ['hPub', 'rodI'], ['hPub', 'rodD'], ['rodI', 'pieI'], ['rodD', 'pieD']];
+  const ALAS = (x1, y1, x2, y2) => [['alaRI', 'Raíz del ala izq.', x1, y1], ['alaPI', 'Punta del ala izq.', x2, y2], ['alaRD', 'Raíz del ala der.', 1 - x1, y1], ['alaPD', 'Punta del ala der.', 1 - x2, y2]];
+  const HUESOS_ALAS = [['alaRI', 'alaPI'], ['alaRD', 'alaPD']];
+  const sinPuntos = (lista, quitar) => lista.filter(x => !quitar.includes(x[0]));
+
+  Object.assign(ESP, {
+    // ======== Bolivia y los Andes ========
+    chachapuma: { grupo: 'andino', nombre: 'Chachapuma · hombre-puma (Tiwanaku)', cab: ['pNuca', 'pHoc'], union: true,
+      pts: [['pNuca', 'Nuca del puma', .5, -.02], ['pHoc', 'Hocico del puma', .5, .15]].concat(CUERPO_H(true)), huesos: [['pNuca', 'pHoc'], ['pHoc', 'hOmb']].concat(HUESOS_H),
+      med: [['Altura total', 'pNuca', 'pieI', 5.5, 'v', 'Las chachapumas de Tiwanaku son figuras compactas, de proporciones cortas y macizas.'], ['Ancho de hombros', 'hHomI', 'hHomD', 2.0, 'd', 'Hombros anchos y rectos: el bloque de piedra se nota en la silueta.'], ['Brazo (hombro→mano)', 'hHomI', 'munI', 2.0, 'd', 'Brazos pegados al cuerpo; a menudo sostienen una cabeza trofeo o un hacha.'], ['Pierna (entrepierna→suelo)', 'hPub', 'pieI', 2.2, 'v', 'Piernas cortas; muchas están arrodilladas o en cuclillas.']],
+      cultura: 'En la cultura Tiwanaku (Bolivia), la chachapuma —"hombre-puma" en aimara— es un guerrero con cabeza o máscara de puma, tallado en piedra (andesita o basalto) en posición frontal.',
+      unionTxt: 'La cabeza de puma se asienta sobre un cuello corto y ancho: en el estilo Tiwanaku la unión casi no se ve, todo es un bloque frontal con detalles incisos planos.' },
+    condor: { grupo: 'andino', nombre: 'Hombre cóndor (figuras aladas de Tiwanaku)', cab: ['cTop', 'cCue'], union: true,
+      pts: [['cTop', 'Cabeza (arriba)', .5, 0], ['cCue', 'Base de la cabeza', .5, .12], ['cPico', 'Punta del pico', .4, .1]].concat(CUERPO_H(true)).concat(ALAS(.56, .22, 1.25, .02)),
+      huesos: [['cTop', 'cCue'], ['cTop', 'cPico'], ['cCue', 'hOmb']].concat(HUESOS_H, HUESOS_ALAS),
+      med: [['Pico (base de la cabeza→punta)', 'cCue', 'cPico', 0.9, 'd', 'El pico del cóndor es corto, fuerte y ganchudo; casi tan largo como la cabeza.'], ['Altura total', 'cTop', 'pieI', 7.5, 'v', 'Cuerpo humano de canon normal.'], ['Ala (raíz→punta)', 'alaRI', 'alaPI', 5.0, 'd', 'Para que unas alas "puedan volar", la envergadura total debe superar la altura de la figura.']],
+      cultura: 'En la Puerta del Sol de Tiwanaku, junto a la figura central, hay seres alados de perfil, algunos con cabeza de cóndor. El cóndor (mallku) es el ave sagrada del mundo de arriba.',
+      unionTxt: 'Las alas son un par de extremidades extra: nacen en los omóplatos, por detrás de los hombros, y necesitan una espalda y unos pectorales más anchos para sostenerse.' },
+    ukuku: { grupo: 'andino', nombre: 'Ukuku · hombre-oso andino', cab: ['hCab', 'hBar'], union: true, pts: CUERPO_H(false), huesos: [['hCab', 'hBar'], ['hBar', 'hOmb']].concat(HUESOS_H),
+      med: [['Altura total', 'hCab', 'pieI', 6.8, 'v', 'Más bajo y macizo que un humano: un oso de pie.'], ['Ancho de hombros', 'hHomI', 'hHomD', 2.4, 'd', 'Hombros muy anchos y caídos, cuello casi inexistente.'], ['Brazo (hombro→mano)', 'hHomI', 'munI', 3.3, 'd', 'Brazos largos: las manos llegan a las rodillas.'], ['Pierna (entrepierna→suelo)', 'hPub', 'pieI', 3.0, 'v', 'Piernas cortas y gruesas, rodillas algo dobladas.']],
+      cultura: 'El ukuku o ukumari, mitad hombre y mitad oso andino (el oso de anteojos o jukumari), es personaje de cuentos y fiestas andinas: guardián, bromista y mediador.',
+      unionTxt: 'Mezcla la postura humana con la masa del oso: hocico corto, orejas redondas, "anteojos" claros alrededor de los ojos y pelaje que suaviza todas las articulaciones.' },
+    amaru: { grupo: 'andino', nombre: 'Amaru · serpiente alada', cab: ['aNuca', 'aHoc'], union: true,
+      pts: [['aNuca', 'Nuca', .12, .3], ['aHoc', 'Hocico', 0, .38], ['c1', 'Cuello', .25, .45], ['c2', 'Cuerpo 1', .4, .3], ['c3', 'Cuerpo 2', .55, .55], ['c4', 'Cuerpo 3', .72, .35], ['cola', 'Punta de la cola', .95, .6], ['alaR', 'Raíz del ala', .38, .28], ['alaP', 'Punta del ala', .5, -.05]],
+      huesos: [['aNuca', 'aHoc'], ['aNuca', 'c1'], ['c1', 'c2'], ['c2', 'c3'], ['c3', 'c4'], ['c4', 'cola'], ['alaR', 'alaP']],
+      med: [['Largo total (nuca→cola, en línea recta)', 'aNuca', 'cola', 9, 'd', 'Una serpiente mítica impresiona por su largo: 9 o más largos de cabeza aunque esté enroscada.'], ['Ala (raíz→punta)', 'alaR', 'alaP', 3.5, 'd', 'Alas de cóndor proporcionadas al cuerpo; nacen detrás del cuello.']],
+      cultura: 'El amaru es la gran serpiente mítica de los Andes, ligada al agua, al rayo y a los cambios del mundo. Se la representa con alas de ave, a veces con dos cabezas o con rasgos de otros animales.',
+      unionTxt: 'Da al cuerpo un ritmo de curvas en S que se afinan de forma continua hacia la cola; las alas nacen detrás del cuello, como en un dragón.' },
+    diablo: { grupo: 'andino', nombre: 'Diablo / Supay de la Diablada (Oruro)', cab: ['mTop', 'mBar'], union: true,
+      pts: [['mTop', 'Máscara: arriba (base de cuernos)', .5, 0], ['mBar', 'Máscara: mentón', .5, .2], ['cuI', 'Punta del cuerno izq.', .7, -.12], ['cuD', 'Punta del cuerno der.', .3, -.12]].concat(sinPuntos(CUERPO_H(true), [])),
+      huesos: [['mTop', 'mBar'], ['mTop', 'cuI'], ['mTop', 'cuD'], ['mBar', 'hOmb']].concat(HUESOS_H),
+      med: [['Cuerno', 'mTop', 'cuI', 0.9, 'd', 'Cuernos retorcidos casi tan largos como la máscara.'], ['Ancho de hombros', 'hHomI', 'hHomD', 1.3, 'd', 'La máscara es enorme: los hombros miden poco más que ella.'], ['Altura total', 'mTop', 'pieI', 5.0, 'v', 'Con la máscara como unidad, el bailarín mide ≈ 5 máscaras.']],
+      cultura: 'La Diablada es la danza emblemática del Carnaval de Oruro (patrimonio de la humanidad). Las máscaras de diablo tienen cuernos, ojos saltones y, sobre la frente, sapos, víboras y lagartos que recuerdan la leyenda de Wari.',
+      unionTxt: 'La máscara se apoya sobre los hombros y la pechera bordada; los cuernos y los animales de la frente crecen hacia arriba y afuera para agrandar la silueta.' },
+    ekeko: { grupo: 'andino', nombre: 'Ekeko (Alasitas)', cab: ['hCab', 'hBar'], pts: CUERPO_H(false), huesos: [['hCab', 'hBar'], ['hBar', 'hOmb']].concat(HUESOS_H),
+      med: [['Altura total', 'hCab', 'pieI', 4.5, 'v', 'Figura bajita: unas 4½ cabezas contando el chullo.'], ['Ancho de hombros', 'hHomI', 'hHomD', 1.9, 'd', 'Hombros anchos para cargar las miniaturas.'], ['Brazos abiertos (mano→mano)', 'munI', 'munD', 3.2, 'd', 'Brazos abiertos, como ofreciendo la abundancia.']],
+      cultura: 'El Ekeko es la figura aimara de la abundancia, protagonista de la feria de Alasitas de La Paz (24 de enero): bajito, sonriente, con bigote y chullo, cargado de miniaturas de lo que se desea.',
+      unionTxt: 'Vientre redondo y prominente, cara sonriente y mejillas llenas; las miniaturas cuelgan de los brazos y la espalda y forman parte de la silueta.' },
+    yaguarete: { grupo: 'andino', nombre: 'Yaguareté-abá · hombre-jaguar (guaraní)', cab: ['pNuca', 'pHoc'], union: true,
+      pts: [['pNuca', 'Nuca del jaguar', .5, -.02], ['pHoc', 'Hocico del jaguar', .45, .14]].concat(CUERPO_H(true)), huesos: [['pNuca', 'pHoc'], ['pHoc', 'hOmb']].concat(HUESOS_H),
+      med: [['Altura total', 'pNuca', 'pieI', 6.5, 'v', 'Cuerpo humano algo encorvado, a medio camino de la transformación.'], ['Ancho de hombros', 'hHomI', 'hHomD', 2.2, 'd', 'Hombros y nuca de felino, muy musculosos.'], ['Brazo (hombro→mano)', 'hHomI', 'munI', 2.8, 'd', 'Brazos largos con garras: listos para caer a cuatro patas.']],
+      cultura: 'En las leyendas guaraníes de las tierras bajas (Chaco y oriente de Bolivia, Paraguay, Argentina), el yaguareté-abá es la persona que se transforma en jaguar.',
+      unionTxt: 'Muestra la transformación: cabeza y hombros felinos, manos con garras y rosetas del pelaje que aparecen poco a poco sobre la piel humana.' },
+    llama: { grupo: 'animal', nombre: 'Llama', cab: ['nuca', 'hocico'], pts: CUAD, huesos: BONES_CUAD,
+      med: [['Altura a la cruz', 'cruz', 'pataD', 3.6, 'v', 'Valores aproximados: varían entre animales.'], ['Cuello', 'nuca', 'cruz', 2.6, 'd', 'Cuello muy largo y casi vertical, con la cabeza alta.'], ['Largo del cuerpo', 'hombro', 'nalga', 3.6, 'd', 'Cuerpo compacto y fibra abundante que redondea la silueta.'], ['Pata delantera (codo→suelo)', 'codo', 'pataD', 2.0, 'v', 'Patas finas con dos dedos y almohadillas; orejas en forma de plátano y cola corta y alta.']] },
+    puma: { grupo: 'animal', nombre: 'Puma', cab: ['nuca', 'hocico'], pts: CUAD, huesos: BONES_CUAD,
+      med: [['Altura a la cruz', 'cruz', 'pataD', 2.4, 'v', 'Cabeza pequeña y redonda para su cuerpo.'], ['Largo del cuerpo', 'hombro', 'nalga', 3.6, 'd', 'Cuerpo largo y bajo, con cola muy larga y gruesa (≈ ⅔ del cuerpo).'], ['Pata trasera (corvejón→suelo)', 'corvejon', 'pataT', 1.1, 'v', 'Patas traseras potentes: la grupa queda algo más alta que la cruz.']] },
+    condorAve: { grupo: 'animal', nombre: 'Cóndor andino', cab: ['cTop', 'cPico'],
+      pts: [['cTop', 'Cabeza (arriba)', .48, .3], ['cPico', 'Punta del pico', .42, .36], ['col', 'Collar blanco', .5, .4], ['alaPI', 'Punta del ala izq.', 1.05, .15], ['alaPD', 'Punta del ala der.', -.05, .15], ['colaP', 'Punta de la cola', .5, .75], ['patas', 'Patas', .5, .68]],
+      huesos: [['cTop', 'cPico'], ['cTop', 'col'], ['col', 'alaPI'], ['col', 'alaPD'], ['col', 'colaP']],
+      med: [['Envergadura (punta a punta)', 'alaPI', 'alaPD', 20, 'd', 'El cóndor puede superar los 3 m de envergadura: unas 20 veces su cabeza con el pico.'], ['Largo del cuerpo (cabeza→cola)', 'cTop', 'colaP', 8, 'd', 'Cuerpo corto respecto a las alas; plumas "dedos" separadas en la punta de cada ala.']],
+      cultura: 'El cóndor (mallku o kuntur) es el ave sagrada de los Andes, mensajera entre el mundo de arriba y el de aquí.' },
+    // ======== Clásicos ========
+    arpia: { grupo: 'clasico', nombre: 'Arpía (híbrido)', cab: ['hCab', 'hBar'], union: true,
+      pts: [['hCab', 'Cabeza (arriba)', .5, 0], ['hBar', 'Barbilla', .5, .13], ['hHomI', 'Hombro izq.', .62, .2], ['hHomD', 'Hombro der.', .38, .2], ['hOmb', 'Ombligo', .5, .42], ['cad', 'Caderas (inicio de plumas)', .5, .52], ['garra', 'Garras', .5, .9]].concat(ALAS(.58, .22, 1.2, .0)),
+      huesos: [['hCab', 'hBar'], ['hHomI', 'hHomD'], ['hBar', 'hOmb'], ['hOmb', 'cad'], ['cad', 'garra']].concat(HUESOS_ALAS),
+      med: [['Torso (barbilla→ombligo)', 'hBar', 'hOmb', 2.0, 'd', 'Torso humano de canon normal.'], ['Ala (raíz→punta)', 'alaRI', 'alaPI', 4.5, 'd', 'Alas grandes, de rapaz.'], ['Patas de ave (caderas→garras)', 'cad', 'garra', 2.8, 'd', 'Patas de ave cortas y fuertes, con garras.']],
+      unionTxt: 'Las plumas empiezan en las caderas y cubren los muslos; las alas nacen en los omóplatos (o sustituyen a los brazos, según la versión).' },
+    esfinge: { grupo: 'clasico', nombre: 'Esfinge (híbrido)', cab: ['hCab', 'hBar'], union: true,
+      pts: sinPuntos(CUAD, ['nuca', 'hocico']).concat([['hCab', 'Cabeza humana (arriba)', .22, .02], ['hBar', 'Barbilla humana', .22, .2]]),
+      huesos: BONES_CUAD.filter(b => !b.includes('nuca') && !b.includes('hocico')).concat([['hCab', 'hBar'], ['hBar', 'cruz']]),
+      med: [['Altura a la cruz (cuerpo de león)', 'cruz', 'pataD', 3.6, 'v', 'La cabeza humana es la unidad: el cuerpo de león mide ≈ 3½ cabezas humanas de alto.'], ['Largo del cuerpo', 'hombro', 'nalga', 5.2, 'd', 'Cuerpo de león largo, a menudo recostado.']],
+      unionTxt: 'La cabeza humana (a menudo con tocado) se apoya sobre el pecho del león: el cuello se ensancha y se funde con la melena o el tocado.' },
+    pegaso: { grupo: 'clasico', nombre: 'Pegaso (caballo alado)', cab: ['nuca', 'hocico'], union: true, pts: CUAD.concat([['alaR', 'Raíz del ala', .4, .28], ['alaP', 'Punta del ala', .65, -.35]]), huesos: BONES_CUAD.concat([['alaR', 'alaP']]),
+      med: [['Altura a la cruz', 'cruz', 'pataD', 2.5, 'v', 'Cuerpo de caballo según su canon.'], ['Ala (raíz→punta)', 'alaR', 'alaP', 3.2, 'd', 'Alas grandes: la envergadura supera el largo del cuerpo.']],
+      unionTxt: 'Las alas nacen justo detrás de la cruz, sobre los omóplatos; necesitan un pecho más profundo para "moverlas".' },
+    grifo: { grupo: 'clasico', nombre: 'Grifo (águila y león)', cab: ['nuca', 'hocico'], union: true, pts: CUAD.map(p => p[0] === 'nuca' ? ['nuca', 'Cabeza de águila (nuca)', p[2], p[3]] : p[0] === 'hocico' ? ['hocico', 'Punta del pico', p[2], p[3]] : p).concat([['alaR', 'Raíz del ala', .4, .28], ['alaP', 'Punta del ala', .62, -.35]]), huesos: BONES_CUAD.concat([['alaR', 'alaP']]),
+      med: [['Altura a la cruz', 'cruz', 'pataD', 3.0, 'v', 'Cabeza de águila (más pequeña que la de león): el cuerpo mide ≈ 3 cabezas de alto.'], ['Ala (raíz→punta)', 'alaR', 'alaP', 3.5, 'd', 'Alas de águila proporcionadas al cuerpo de león.']],
+      unionTxt: 'La mitad delantera es de águila (cabeza, alas y patas con garras) y la trasera de león: la transición va en el pecho, con plumas que se vuelven pelaje.' },
+  });
+  for (const k of ['caballo', 'perro', 'gato', 'toro', 'leon']) ESP[k].grupo = 'animal';
+  for (const k of ['centauro', 'sirena', 'minotauro', 'satiro']) ESP[k].grupo = 'clasico';
+  Object.assign(ESP.centauro, { unionTxt: 'Revisa que el torso humano nazca donde el caballo tendría el cuello, sobre la punta del hombro, y que la espalda humana continúe la línea de la cruz sin escalón.' });
+  Object.assign(ESP.sirena, { unionTxt: 'Haz la transición a escamas en las caderas, con una línea curva y no recta; el vientre continúa en el lado de abajo de la cola.' });
+  Object.assign(ESP.minotauro, { unionTxt: 'El cuello del toro se ensancha y se funde con el trapecio humano: sin cuello fino entre ambos.' });
+  Object.assign(ESP.satiro, { unionTxt: 'Las caderas son humanas y los muslos ya son de cabra: la transición va en la parte alta del muslo, a menudo cubierta de pelo.' });
   let especie = ls.get('escultorEspecie', 'caballo');
 
   // pestaña Animales
@@ -49,7 +130,9 @@
   })();
   const sel = document.createElement('select'); sel.id = 'animSel';
   sel.style.cssText = 'position:absolute;left:62px;top:12px;z-index:3;background:rgba(24,24,33,.92);color:#fff;border:1px solid var(--acc);border-radius:12px;padding:8px 10px;font-size:14px;display:none;max-width:60%';
-  sel.innerHTML = Object.entries(ESP).map(([k, v]) => `<option value="${k}">${v.nombre}</option>`).join(''); sel.value = especie;
+  const GRUPOS = [['animal', 'Animales'], ['andino', 'Bolivia y los Andes'], ['clasico', 'Híbridos clásicos']];
+  sel.innerHTML = GRUPOS.map(([g, n]) => `<optgroup label="${n}">` + Object.entries(ESP).filter(([, v]) => v.grupo === g).map(([k, v]) => `<option value="${k}">${v.nombre}</option>`).join('') + '</optgroup>').join('');
+  if (!ESP[especie]) especie = 'caballo'; sel.value = especie;
   $('stage').appendChild(sel);
   sel.onchange = () => { especie = sel.value; ls.set('escultorEspecie', especie); MO.refrescar(); E.flash([[`Arrastra los puntos a tu ${ESP[especie].nombre.toLowerCase()}. Empieza por la cabeza: es la unidad de medida.`, '']], 6000); };
 
@@ -57,8 +140,11 @@
   function puntos() {
     const vs = vst(); vs.anim = vs.anim || {};
     if (!vs.anim[especie]) {
-      const W = E.fit.sw, H = E.fit.sh, bw = W * 0.7, bh = H * 0.62, ox = W * 0.15, oy = H * 0.3, o = {};
-      for (const [k, , x, y] of ESP[especie].pts) o[k] = P(ox + x * bw, oy + y * bh);
+      // coloca la plantilla centrada y sin deformarla (respeta sus proporciones)
+      const W = E.fit.sw, H = E.fit.sh, pts = ESP[especie].pts, o = {};
+      const xs = pts.map(q => q[2]), ys = pts.map(q => q[3]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const k = Math.min(W * 0.8 / ((x1 - x0) || 1), H * 0.82 / ((y1 - y0) || 1)), ox = (W - (x1 - x0) * k) / 2 - x0 * k, oy = (H - (y1 - y0) * k) / 2 - y0 * k;
+      for (const [kk, , x, y] of pts) o[kk] = P(ox + x * k, oy + y * k);
       vs.anim[especie] = o;
     }
     return vs.anim[especie];
@@ -68,7 +154,8 @@
     sel.style.display = S.modo === 'animal' ? 'block' : 'none';
     if (S.modo !== 'animal' || !E.fuente()) return;
     const sp = ESP[especie], p = puntos(), sc = E.toScr;
-    for (const [a, b] of sp.huesos) if (p[a] && p[b]) E.line(sc(p[a]), sc(p[b]), 4, a[0] === 'h' && b[0] === 'h' ? 'rgba(124,196,255,.85)' : 'rgba(167,139,250,.85)');
+    const humano = (k) => /^(h|mun|rod|pie)/.test(k), alar = (k) => /^ala/.test(k);
+    for (const [a, b] of sp.huesos) if (p[a] && p[b]) E.line(sc(p[a]), sc(p[b]), 4, alar(a) || alar(b) ? 'rgba(255,209,102,.85)' : humano(a) && humano(b) ? 'rgba(124,196,255,.85)' : 'rgba(167,139,250,.85)');
     // guía del cuadrado (cuadrúpedos): altura a la cruz y largo del cuerpo
     if (p.cruz && p.pataD && p.hombro && p.nalga) { const H = Math.abs(p.pataD.y - p.cruz.y), x0 = Math.min(p.hombro.x, p.nalga.x), L = Math.abs(p.nalga.x - p.hombro.x); const a = sc(P(x0, p.pataD.y - H)), b = sc(P(x0 + L, p.pataD.y)); E.ctx.setLineDash([8, 6]); E.ctx.strokeStyle = 'rgba(255,209,102,.6)'; E.ctx.lineWidth = 1.5; E.ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y); E.ctx.setLineDash([]); }
     if (sp.union && p.hOmb) E.circle(sc(p.hOmb), 16 + 4 * Math.sin(performance.now() / 200), 'rgba(255,209,102,.15)', '#ffd166');
@@ -83,13 +170,14 @@
     if (S.modo !== 'animal' || !has) return [];
     const sp = ESP[especie], p = puntos(), u = dist(p[sp.cab[0]], p[sp.cab[1]]), out = [];
     if (!tocados) out.push({ id: 'an:marcar', parte: sp.nombre, texto: `Arrastra los puntos a tu escultura. Los naranjas miden la cabeza (${sp.pts.find(x => x[0] === sp.cab[0])[1]} y ${sp.pts.find(x => x[0] === sp.cab[1])[1]}): es la unidad para todo lo demás.${sp.union ? ' El círculo amarillo marca la unión entre las dos anatomías.' : ''}`, st: 'info', at: p[sp.cab[0]], tip: 'Ningún detector automático reconoce animales esculpidos ni seres híbridos: por eso se colocan los puntos a mano. Funciona con cualquier pose.' });
+    if (sp.cultura) out.push({ id: 'an:cultura', parte: 'Sobre ' + sp.nombre.split(' (')[0].split(' · ')[0], texto: sp.cultura, st: 'info', at: null, tip: 'Busca fotos de piezas reales en la Biblioteca (por ejemplo, «' + sp.nombre.split(' · ')[0].split(' (')[0] + '») para estudiar su estilo.' });
     if (!(u > 3) || !tocados) return out;
     for (const [nom, a, b, can, tipo, tip] of sp.med) {
       if (!p[a] || !p[b]) continue;
       const d = tipo === 'v' ? Math.abs(p[b].y - p[a].y) : dist(p[a], p[b]), r = d / u / can, dd = Math.abs(r - 1);
       if (dd > 0.12) out.push({ id: 'an:' + nom, parte: nom, texto: `Mide ${f1(d / u)} cabezas y el canon de ${sp.nombre.toLowerCase()} pide ≈ ${f1(can)}. ${r > 1 ? 'Es demasiado largo' : 'Es demasiado corto'} (${Math.round(dd * 100)}%).`, st: dd > 0.25 ? 'bad' : 'warn', at: mid(p[a], p[b]), tip });
     }
-    if (sp.union) out.push({ id: 'an:union', parte: 'La unión', texto: { centauro: 'Revisa que el torso humano nazca donde el caballo tendría el cuello, sobre la punta del hombro, y que la espalda humana continúe la línea de la cruz sin escalón.', sirena: 'Haz la transición a escamas en las caderas, con una línea curva y no recta; el vientre continúa en el lado de abajo de la cola.', minotauro: 'El cuello del toro se ensancha y se funde con el trapecio humano: sin cuello fino entre ambos.', satiro: 'Las caderas son humanas y los muslos ya son de cabra: la transición va en la parte alta del muslo, a menudo cubierta de pelo.' }[especie], st: 'info', at: p.hOmb || p.cad, tip: 'Un híbrido convence cuando las dos anatomías comparten los mismos ejes de peso y equilibrio: comprueba la plomada.' });
+    if (sp.union && sp.unionTxt) out.push({ id: 'an:union', parte: 'La unión', texto: sp.unionTxt, st: 'info', at: p.hOmb || p.cad || p[sp.cab[1]], tip: 'Un híbrido convence cuando las dos anatomías comparten los mismos ejes de peso y equilibrio: comprueba la plomada.' });
     return out;
   });
   window.Animales = { ESP };
