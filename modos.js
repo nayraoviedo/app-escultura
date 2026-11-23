@@ -19,7 +19,7 @@
   const v3 = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }), L3 = (v) => Math.hypot(v.x, v.y, v.z), L2 = (v) => Math.hypot(v.x, v.y);
   const m3 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
   const W3 = () => (S.mode === 'auto' && S.world && S.world.length > 30) ? S.world : null;
-  const M = { anchos: [], autoRef: ls.get('escultorAutoRef', true), autoId: null, corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
+  const M = { hist: {}, clay: ls.get('escultorBarro', null), pickClay: false, regla: false, reglaP: null, edgeDrag: null, anchos: [], autoRef: ls.get('escultorAutoRef', true), autoId: null, corr: [], sel: null, done: new Set(), live: null, liveKey: null, busy: false, lastRun: 0, drag: null, editPts: false, sug: [], lastSug: 0, sigList: '', lastThumb: 0, proyecto: ls.get('escultorProyecto', 'Mi escultura') };
   S.modo = ls.get('escultorModo', 'cuerpo');
   if (S.modo === 'biblio') S.modo = 'cuerpo';
 
@@ -28,7 +28,7 @@
   function setModo(m) {
     if (m === 'biblio') { B() && B().abrir('buscar'); return; }
     S.modo = m; ls.set('escultorModo', m);
-    S.focus = null; M.sel = null; M.live = null; M.liveKey = null; M.sigList = ''; M.sug = []; M.anchos = [];
+    S.focus = null; M.sel = null; M.live = null; M.liveKey = null; M.sigList = ''; M.sug = []; M.anchos = []; M.hist = {};
     document.querySelectorAll('#modos button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
     E.setSeg(m === 'piernas' || m === 'torso');
     if (m === 'rostro' || m === 'manos') B() && B().sol(m === 'rostro' ? 'face' : 'hand').catch(() => {});
@@ -105,6 +105,57 @@
     while (b < maxPx && dentro(sl, add(c, mul(dir, b + st)))) b += st;
     return { A: add(c, mul(dir, -a)), B: add(c, mul(dir, b)), w: a + b, tope: a >= maxPx || b >= maxPx };
   }
+  // fotograma reducido para leer colores (borde por contraste)
+  const FR = { c: null, data: null, w: 0, h: 0, k: 1, t: 0, src: null };
+  function cuadro() {
+    const src = E.fuente(); if (!src) return null;
+    const quieto = S.frozen || S.src !== 'cam', now = performance.now();
+    if (FR.data && FR.src === src && (quieto || now - FR.t < 250)) return FR;
+    const w = 480, h = Math.max(1, Math.round(480 * E.fit.sh / E.fit.sw));
+    const c = FR.c || (FR.c = document.createElement('canvas')); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    try { x.drawImage(src, 0, 0, w, h); FR.data = x.getImageData(0, 0, w, h).data; } catch (e) { return null; }
+    FR.w = w; FR.h = h; FR.k = w / E.fit.sw; FR.t = now; FR.src = src; return FR;
+  }
+  function pixel(fr, q) { const x = Math.round(q.x * fr.k), y = Math.round(q.y * fr.k); if (x < 0 || y < 0 || x >= fr.w || y >= fr.h) return null; const i = (y * fr.w + x) * 4; return [fr.data[i], fr.data[i + 1], fr.data[i + 2]]; }
+  const lum = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  const cdist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  // busca, a lo largo de una línea, el cambio de luz/color más fuerte (el contorno de la pieza)
+  function borde(fr, c, dir, prior, e) {
+    const st = 1 / fr.k, lo = prior != null ? prior * 0.75 : e * 0.35, hi = prior != null ? prior * 1.25 : e * 1.6;
+    let ref = M.clay;
+    if (!ref) { const s = [0, 0, 0]; let n = 0; for (let t = 0; t <= Math.min(lo, e * 0.3); t += st) { const px = pixel(fr, add(c, mul(dir, t))); if (px) { s[0] += px[0]; s[1] += px[1]; s[2] += px[2]; n++; } } if (!n) return null; ref = s.map(v => v / n); }
+    let best = -1, bt = null;
+    for (let t = lo; t <= hi; t += st) {
+      const p1 = pixel(fr, add(c, mul(dir, t - 2 * st))), p2 = pixel(fr, add(c, mul(dir, t + 2 * st)));
+      if (!p1 || !p2) break;
+      const g = Math.abs(lum(p2) - lum(p1)) + Math.max(0, cdist(p2, ref) - cdist(p1, ref));
+      if (g > best) { best = g; bt = t; }
+    }
+    return best >= 18 ? bt : null;
+  }
+  const mediana = (arr) => { const s = arr.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function medir(id, c, dir, ideal) {
+    const sl = silueta(), fr = cuadro();
+    let a = null, b = null, tope = false, fuente = '';
+    if (sl) { const r = ancho(sl, c, dir, ideal * 0.95); if (r) { if (r.tope) tope = true; else { a = dist(c, r.A); b = dist(c, r.B); fuente = 'silueta'; } } }
+    if (fr) {
+      const ra = borde(fr, c, mul(dir, -1), a, ideal / 2), rb = borde(fr, c, dir, b, ideal / 2);
+      if (ra != null) a = ra; if (rb != null) b = rb;
+      if (ra != null || rb != null) fuente = fuente ? 'silueta + contraste' : 'contraste';
+    }
+    const ov = vstate().edges && vstate().edges[id];
+    if (ov) { a = ov.a; b = ov.b; fuente = 'ajustado a mano'; }
+    else {
+      if (a == null || b == null) return tope ? { tope: true } : null;
+      if (S.src === 'cam' && !S.frozen) { // promedio de los últimos fotogramas: descarta saltos
+        const now = performance.now(), h = M.hist[id] || (M.hist[id] = []);
+        h.push({ a, b, t: now }); while (h.length && now - h[0].t > 1500) h.shift(); if (h.length > 12) h.shift();
+        a = mediana(h.map(x => x.a)); b = mediana(h.map(x => x.b));
+      }
+    }
+    return { A: add(c, mul(dir, -a)), B: add(c, mul(dir, b)), w: a + b, tope: false, fuente, id, c, dir, a, b };
+  }
   const adultoT = () => S.edad === 'teen' || String(S.edad).startsWith('adulto');
   const kComp = () => ({ delgada: 0.9, media: 1, robusta: 1.12 }[S.comp] || 1);
 
@@ -154,7 +205,7 @@
 
   // anchos del tronco por la silueta (pecho, cintura, caderas)
   function anchosTorso(A, T) {
-    const sl = silueta(); if (!sl || enPerfil(T) || !adultoT()) return [];
+    if (enPerfil(T) || !adultoT() || (!silueta() && !cuadro())) return [];
     const F = fem(), kc = kComp(), cm = T.cmPx, out = [];
     const tabla = F ? [['Pecho', 'Pezones', 1.3], ['Cintura', 'Cintura', 1.05], ['Caderas', 'Caderas (más ancho)', 1.6]] : [['Pecho', 'Pezones', 1.45], ['Cintura', 'Cintura', 1.25], ['Caderas', 'Caderas (más ancho)', 1.45]];
     const brazos = ['elL', 'elR', 'wrL', 'wrR'].map(k => A.M[k]).filter(Boolean);
@@ -162,11 +213,11 @@
     for (const [nom, linea, cw] of tabla) {
       const gg = T.G.find(x => x[0] === linea); if (!gg) continue;
       const c = nom === 'Caderas' ? A.M.midHip : T.at(gg[1], 0, 0), ideal = cw * kc * T.fW * T.u;
-      const r = ancho(sl, c, T.perp, ideal * 0.9); if (!r || r.tope) continue;
+      const r = medir('t' + nom, c, T.perp, ideal); if (!r || r.tope) continue;
       const toca = brazos.some(b => Math.abs(dot(sub(b, c), T.down)) < 0.6 * T.u && Math.abs(dot(sub(b, c), T.perp)) < r.w / 2 + 0.15 * T.u);
       if (toca) { pegados = true; continue; }
       const q = r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.15 ? 'warn' : 'ok';
-      M.anchos.push({ A: r.A, B: r.B, t: f1(r.w * cm) + ' cm', st });
+      M.anchos.push({ A: r.A, B: r.B, t: f1(r.w * cm) + ' cm', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano' });
       if (st !== 'ok') out.push({ id: 's:t' + nom, parte: `${nom} (silueta)`, texto: `Mide ≈ ${f1(r.w * cm)} cm de ancho; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Reduce' : 'Aumenta'} el volumen ${f1(Math.abs(r.w - ideal) * cm)} cm en total.`, st, at: c, tip: F ? 'En la mujer, la cintura es lo más estrecho del tronco y las caderas igualan o superan el ancho de los hombros.' : 'En el hombre, el tronco es un trapecio: hombros y pecho anchos, cintura poco marcada y caderas estrechas.' });
     }
     if (pegados) out.push({ id: 's:tbrazos', parte: 'Anchos del tronco', texto: 'Los brazos tocan el tronco y la silueta se mezcla: no mido esos anchos. Usa los puntos de cintura o mira cuando los brazos estén separados.', st: 'info', at: A.M.midHip, tip: 'Para medir anchos a mano, usa el compás de punta a punta del contorno, a la altura de cada línea guía.' });
@@ -225,7 +276,20 @@
     return out;
   }
   function etiqueta(q, t, col) { const x = E.ctx; x.font = '600 12px system-ui'; const w = x.measureText(t).width; x.fillStyle = 'rgba(10,10,16,.7)'; x.fillRect(q.x + 4, q.y - 9, w + 8, 18); x.fillStyle = col || '#d8ccff'; x.fillText(t, q.x + 8, q.y + 4); }
-  function dibAnchos() { for (const a of (M.anchos || [])) { const A1 = E.toScr(a.A), B1 = E.toScr(a.B); E.line(A1, B1, 2.5, COL[a.st] || '#fff'); E.circle(A1, 3.5, '#fff'); E.circle(B1, 3.5, '#fff'); etiqueta(B1, a.t, COL[a.st]); } }
+  function dibAnchos() {
+    for (const a of (M.anchos || [])) {
+      const A1 = E.toScr(a.A), B1 = E.toScr(a.B), dr = M.edgeDrag && M.edgeDrag.id === a.id;
+      E.line(A1, B1, 2.5, COL[a.st] || '#fff');
+      for (const q of [A1, B1]) E.circle(q, dr ? 9 : 6.5, 'rgba(255,255,255,.25)', '#fff');
+      etiqueta(B1, (a.man ? '✋ ' : '') + a.t, COL[a.st]);
+    }
+  }
+  function escalaCm() { const A = S.analysis; if (A && A.u) return (S.altura / A.C.H) / A.u; if (F) return F.cmPx; return null; }
+  function dibReglas() {
+    const vs = vstate(), k = escalaCm();
+    for (const r of (vs.reglas || [])) { const a = E.toScr(r[0]), b = E.toScr(r[1]); E.line(a, b, 3, '#22d3ee'); E.circle(a, 5, '#22d3ee'); E.circle(b, 5, '#22d3ee'); etiqueta(mid(a, b), k ? f1(dist(r[0], r[1]) * k) + ' cm' : 'sin escala', '#a5f3fc'); }
+    if (M.reglaP) E.circle(E.toScr(M.reglaP), 7, '#22d3ee', '#fff');
+  }
   function dibTorso(A) {
     const T = torsoGeo(A), vs = vstate(), Mm = A.M, sc = E.toScr, perfil = enPerfil(T);
     if (perfil) {
@@ -297,7 +361,7 @@
   }
   function anchosPiernas(A) {
     M.anchos = [];
-    const sl = silueta(); if (!sl) return [];
+    if (!silueta() && !cuadro()) return [];
     if (!adultoT()) return [{ id: 's:pninos', parte: 'Grosor de piernas', texto: 'En bebés y niños el grosor depende mucho de la grasa: no hay un canon fiable. Compara las dos piernas entre sí.', st: 'info', at: A.M.knL || A.M.midHip, tip: 'En los niños, las rodillas y los tobillos casi no se marcan; los muslos son cónicos y blandos.' }];
     const F = fem(), kc = kComp(), u = A.u, cmCab = S.altura / A.C.H, cm = cmCab / u;
     const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
@@ -309,17 +373,19 @@
       const d1 = norm(sub(K, Hh)), d2 = norm(sub(An, K)), p1 = P(-d1.y, d1.x), p2 = P(-d2.y, d2.x), pr = norm(P(-(d1.y + d2.y), d1.x + d2.x));
       const pts = { mus: [add(Hh, mul(sub(K, Hh), 0.25)), p1], mid: [mid(Hh, K), p1], rod: [K, pr], tob: [add(K, mul(sub(An, K), 0.88)), p2] };
       for (const [key, [c, dir]] of Object.entries(pts)) {
-        const r = ancho(sl, c, dir, W[key] * kc * u * 0.95); if (!r) continue; if (r.tope) { juntas = true; continue; }
+        const r = medir(key + lado, c, dir, W[key] * kc * u); if (!r) continue; if (r.tope) { juntas = true; continue; }
         medidas[key + lado] = { r, c };
       }
-      let best = null; for (let t = 0.15; t <= 0.46; t += 0.05) { const c = add(K, mul(sub(An, K), t)), r = ancho(sl, c, p2, W.pan * kc * u * 0.95); if (r && !r.tope && (!best || r.w > best.r.w)) best = { r, c }; }
-      if (best) medidas['pan' + lado] = best;
+      const sl = silueta(); let best = null;
+      if (sl) for (let t = 0.15; t <= 0.46; t += 0.05) { const c = add(K, mul(sub(An, K), t)), r = ancho(sl, c, p2, W.pan * kc * u * 0.95); if (r && !r.tope && (!best || r.w > best.w)) best = { w: r.w, c }; }
+      const cPan = best ? best.c : add(K, mul(sub(An, K), 0.3));
+      const rp = medir('pan' + lado, cPan, p2, W.pan * kc * u); if (rp && !rp.tope) medidas['pan' + lado] = { r: rp, c: cPan };
     }
     for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
       const md = medidas[key + lado]; if (!md) continue;
       const ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.18 ? 'warn' : 'ok';
-      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st });
-      if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido en la silueta).`, st, at: md.c, tip: TIP[key] });
+      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano' });
+      if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido ${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'en la imagen; si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
     }
     for (const key of Object.keys(W)) {
       const a = medidas[key + 'izq'], b = medidas[key + 'der']; if (!a || !b) continue;
@@ -490,6 +556,7 @@
     if (S.modo === 'piernas' && A) dibPiernas(A);
     if (S.modo === 'rostro' && M.live && M.live.kind === 'face') { const lm = M.live.r && M.live.r.multiFaceLandmarks && M.live.r.multiFaceLandmarks[0]; if (lm) { F = geoRostro(lm); dibRostro(F); } }
     if (S.modo === 'manos' && M.live && M.live.kind === 'hand') dibManos(M.live.r);
+    dibReglas();
     // pulso sobre la corrección seleccionada (los modos que no son cuerpo)
     const c = M.corr.find(x => x.id === M.sel);
     if (c && c.at && !c.seg) { const t = performance.now() / 1000, q = E.toScr(c.at); E.circle(q, 18 + 5 * Math.sin(t * 5), 'rgba(124,92,255,.2)', '#a78bfa'); E.circle(q, 4, '#fff'); }
@@ -508,6 +575,7 @@
       else if (S.modo === 'rostro') list = F ? corrRostro(F) : [];
       else if (S.modo === 'manos') list = M.live && M.live.kind === 'hand' ? corrManos(M.live.r) : [];
     }
+    list = list.concat(corrCompas());
     M.corr = list.filter(c => !M.done.has(S.view + '|' + c.id));
     if (M.sel && !M.corr.find(c => c.id === M.sel)) { M.sel = null; S.focus = null; }
     pintarCorr(has);
@@ -540,8 +608,10 @@
     const sig = S.modo + '|' + list.map(c => c.id + c.texto).join('|') + '|' + M.sel;
     if (sig === M.sigList) { miniaturas(); return; }
     M.sigList = sig;
-    if (!has) { $('corrList').innerHTML = `<div class="vacio">Abre la cámara o una foto de tu escultura. Modo actual: <b>${MODOS[S.modo]}</b>.</div>`; $('corrFoot').innerHTML = ''; return; }
-    if (!list.length) { $('corrList').innerHTML = `<div class="vacio">✓ Sin correcciones pendientes en <b>${MODOS[S.modo]}</b>, vista ${E.VNAME[S.view].toLowerCase()}. Gira la pieza y revisa otra vista.</div>`; $('corrFoot').innerHTML = ''; return; }
+    $('corrFoot').innerHTML = '<button class="hecho" id="cfCompas">🧭 Escribir medidas del compás</button>';
+    $('cfCompas').onclick = abrirCompas;
+    if (!has && !list.length) { $('corrList').innerHTML = `<div class="vacio">Abre la cámara o una foto de tu escultura, o mide con compás y escribe los cm. Modo actual: <b>${MODOS[S.modo]}</b>.</div>`; return; }
+    if (!list.length) { $('corrList').innerHTML = `<div class="vacio">✓ Sin correcciones pendientes en <b>${MODOS[S.modo]}</b>, vista ${E.VNAME[S.view].toLowerCase()}. Gira la pieza y revisa otra vista.</div>`; return; }
     $('corrList').innerHTML = list.map(c => `
       <div class="cc${c.id === M.sel ? ' sel' : ''}" data-id="${c.id}">
         <h4><i style="background:${COL[c.st] || '#888'}"></i>${c.parte}</h4>
@@ -690,14 +760,32 @@
     return null;
   }
   function pointerdown(e, q) {
+    if (M.pickClay) {
+      const fr = cuadro(), c = E.toImg(q); M.pickClay = false;
+      if (fr) { const s = [0, 0, 0]; let n = 0; for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) { const px = pixel(fr, add(c, P(dx / fr.k, dy / fr.k))); if (px) { s[0] += px[0]; s[1] += px[1]; s[2] += px[2]; n++; } } if (n) { M.clay = s.map(v => Math.round(v / n)); ls.set('escultorBarro', M.clay); M.hist = {}; E.flash([[`🎨 Color del barro guardado (rgb ${M.clay.join(', ')}). Ahora los bordes se buscan contra este color.`, 'ok']], 5000); } }
+      return true;
+    }
+    if (M.regla) {
+      const pt = E.toImg(q);
+      if (!M.reglaP) M.reglaP = pt; else { const vs = vstate(); (vs.reglas = vs.reglas || []).push([M.reglaP, pt]); M.reglaP = null; }
+      return true;
+    }
+    for (const a of (M.anchos || [])) {
+      for (const [lado, pt] of [['a', a.A], ['b', a.B]]) if (a.id && dist(E.toScr(pt), q) < 26) {
+        M.edgeDrag = { id: a.id, lado, c: a.c, dir: a.dir }; const vs = vstate(); vs.edges = vs.edges || {}; if (!vs.edges[a.id]) vs.edges[a.id] = { a: a.a, b: a.b };
+        e.target.setPointerCapture(e.pointerId); return true;
+      }
+    }
     const pe = puntosEditables(); if (!pe) return false;
     let best = null, bd = 40;
     for (const k of pe[1]) { const d = dist(E.toScr(pe[0][k]), q); if (d < bd) { bd = d; best = k; } }
     if (!best) return false;
     M.drag = best; e.target.setPointerCapture(e.pointerId); return true;
   }
-  function pointermove(e, q) { if (!M.drag) return false; const pe = puntosEditables(); if (!pe) return false; pe[0][M.drag] = E.toImg(q); vstate()[pe[2]] = true; M.sigList = ''; return true; }
-  function pointerup() { M.drag = null; }
+  function pointermove(e, q) {
+    if (M.edgeDrag) { const d = M.edgeDrag, t = dot(sub(E.toImg(q), d.c), d.dir), ed = vstate().edges[d.id]; if (d.lado === 'a') ed.a = Math.max(1, -t); else ed.b = Math.max(1, t); M.sigList = ''; lastCorr = 0; return true; }
+    if (!M.drag) return false; const pe = puntosEditables(); if (!pe) return false; pe[0][M.drag] = E.toImg(q); vstate()[pe[2]] = true; M.sigList = ''; return true; }
+  function pointerup() { M.drag = null; if (M.edgeDrag) { M.edgeDrag = null; lastCorr = 0; } }
 
   // ======================= Figura en miniatura =======================
   function pintarMini() {
@@ -771,6 +859,102 @@
       <div class="stat"><b>Partes que más corregiste</b>${top.length ? top.map(([p, n]) => `<div class="barrow"><span>${p}</span><i style="width:${n / mx * 60}%"></i><span>${n}</span></div>`).join('') : '<p class="note">Marca correcciones como hechas y aparecerán aquí.</p>'}</div>
       <div class="stat"><b>Correcciones pendientes en cada foto de progreso</b>${l.length ? l.map(s => `<div class="barrow"><span>${new Date(s.t).toLocaleDateString('es')} ${new Date(s.t).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span><i style="width:${s.pendientes / mxp * 60}%;background:${s.pendientes ? 'var(--warn)' : 'var(--ok)'}"></i><span>${s.pendientes}</span></div>`).join('') : '<p class="note">Guarda tu progreso de vez en cuando (Progreso ▸ Guardar) para ver la evolución.</p>'}</div>`;
   }
+
+  // ======================= Medir con compás =======================
+  function listaCompas() {
+    const C = E.canonActual(), F = fem(), kc = kComp(), a = adultoT();
+    const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
+    const L = {
+      cuerpo: [['alt', 'Altura total (de pie)', 'del punto más alto del cráneo al suelo', C.H], ['cab', 'Cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['hom', 'Ancho de hombros', 'de borde a borde exterior de los hombros', (F ? 1.75 : 2) * kc], ['ua', 'Brazo', 'del hombro (acromion) al codo', C.ua], ['fa', 'Antebrazo', 'del codo a la muñeca', C.fa], ['mano', 'Mano', 'de la muñeca a la punta del dedo medio', C.hand], ['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta del dedo más largo', C.foot]],
+      torso: [['pecho', 'Ancho del pecho', 'de lado a lado, a la altura de los pezones', (F ? 1.3 : 1.45) * kc], ['cint', 'Ancho de cintura', 'en la parte más estrecha', (F ? 1.05 : 1.25) * kc], ['cad', 'Ancho de caderas', 'en la parte más ancha (trocánteres)', (F ? 1.6 : 1.45) * kc], ['cuepez', 'Hueco del cuello → pezones', 'en vertical', F ? 0.8 : 0.67], ['pezpez', 'Entre pezones', 'de pezón a pezón', F ? 0.94 : 1], ['pezomb', 'Pezones → ombligo', 'en vertical', F ? 0.9 : 1], ['ombpub', 'Ombligo → pubis', 'en vertical', 1]],
+      piernas: [['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta', C.foot]].concat(a ? [['gmus', 'Grosor muslo (arriba)', 'de lado a lado, bajo la ingle', W.mus * kc], ['gmid', 'Grosor muslo (mitad)', 'de lado a lado', W.mid * kc], ['grod', 'Grosor rodilla', 'de lado a lado', W.rod * kc], ['gpan', 'Grosor pantorrilla', 'en su parte más ancha', W.pan * kc], ['gtob', 'Grosor tobillo', 'sobre los maléolos', W.tob * kc]] : []),
+      rostro: [['rcab', 'Alto de la cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['ranc', 'Ancho de la cabeza', 'de sien a sien (sobre las orejas)', 0.7], ['rter', 'Cada tercio de la cara', 'p. ej. de las cejas a la base de la nariz', 0.27], ['rojo', 'Ancho de un ojo', 'del lagrimal a la comisura externa', 0.13], ['rio', 'Entre ojos', 'de lagrimal a lagrimal', 0.13], ['rnar', 'Ancho de la nariz', 'de ala a ala', 0.15], ['rboc', 'Ancho de la boca', 'de comisura a comisura', 0.22], ['rore', 'Alto de la oreja', 'del borde superior al lóbulo', 0.27]],
+      manos: [['mlar', 'Largo de la mano', 'de la muñeca a la punta del dedo medio', C.hand], ['mpal', 'Largo de la palma', 'de la muñeca al nudillo del dedo medio', C.hand * 0.57], ['manc', 'Ancho de la palma', 'de borde a borde, en los nudillos', (F ? 0.34 : 0.37) * kc], ['mmed', 'Dedo medio', 'del nudillo a la punta', C.hand * 0.43]],
+    };
+    const ancho = ['hom', 'pecho', 'cint', 'cad', 'gmus', 'gmid', 'grod', 'gpan', 'gtob', 'ranc', 'rnar', 'rboc', 'manc'];
+    return (L[S.modo] || []).map(([k, lab, como, cab]) => ({ k, lab, como, cm: cab * S.altura / C.H, ancho: ancho.includes(k) }));
+  }
+  const keyCompas = () => M.proyecto + '|' + S.modo;
+  function valoresCompas() { return (ls.get('escultorCompas', {})[keyCompas()]) || {}; }
+  function corrCompas() {
+    const v = valoresCompas(), out = [];
+    for (const it of listaCompas()) {
+      const x = parseFloat(v[it.k]); if (!(x > 0)) continue;
+      const r = x / it.cm, d = Math.abs(x - it.cm), st = Math.abs(r - 1) <= 0.06 ? 'ok' : Math.abs(r - 1) <= 0.12 ? 'warn' : 'bad';
+      if (st === 'ok') continue;
+      const acc = it.ancho ? (x > it.cm ? 'Reduce el volumen' : 'Dale volumen') : (x > it.cm ? 'Acórtalo' : 'Alárgalo');
+      out.push({ id: 'c:' + it.k, parte: it.lab + ' (compás)', texto: `Mediste ${f1(x)} cm y el canon pide ≈ ${f1(it.cm)} cm. ${acc} ${f1(d)} cm.`, st, at: null, tip: `Se mide ${it.como}. Es la medida más fiable: no depende de la cámara, la luz ni el escorzo.` });
+    }
+    return out;
+  }
+  function abrirCompas() {
+    const box = $('sCompBody'), v = valoresCompas(), l = listaCompas();
+    $('sCompTit').textContent = 'Medir con compás · ' + MODOS[S.modo];
+    box.innerHTML = `<p class="note">Mide en tu escultura entre los puntos indicados y escribe los cm. Las referencias son para una figura de <b>${S.altura} cm</b> de alto (cámbialo en ⚙️).</p>` +
+      l.map(it => `<div class="row" style="border-bottom:1px solid var(--line);padding-bottom:10px"><label><b style="color:var(--txt)">${it.lab}</b> · ${it.como}</label>
+        <div style="display:flex;gap:10px;align-items:center"><input type="number" inputmode="decimal" step="0.1" min="0" data-k="${it.k}" value="${v[it.k] ?? ''}" placeholder="cm" style="max-width:120px;font-size:18px"><span class="note">canon ≈ <b>${f1(it.cm)} cm</b></span><span data-r="${it.k}" style="font-size:14px"></span></div></div>`).join('') +
+      '<button class="big sec" id="compBorrar">Borrar medidas de este modo</button>';
+    const pinta = (k) => { const it = l.find(x => x.k === k), x = parseFloat(valoresCompas()[k]), el = box.querySelector(`[data-r="${k}"]`); if (!(x > 0)) { el.textContent = ''; return; } const r = x / it.cm; el.style.color = Math.abs(r - 1) <= 0.06 ? 'var(--ok)' : Math.abs(r - 1) <= 0.12 ? 'var(--warn)' : 'var(--bad)'; el.textContent = Math.abs(r - 1) <= 0.06 ? '✓ bien' : (x > it.cm ? (it.ancho ? '−' : 'acorta ') : (it.ancho ? '+' : 'alarga ')) + f1(Math.abs(x - it.cm)) + ' cm'; };
+    box.querySelectorAll('input[data-k]').forEach(inp => { pinta(inp.dataset.k); inp.oninput = () => { const all = ls.get('escultorCompas', {}), cur = all[keyCompas()] || {}; if (inp.value === '') delete cur[inp.dataset.k]; else cur[inp.dataset.k] = inp.value; all[keyCompas()] = cur; ls.set('escultorCompas', all); pinta(inp.dataset.k); M.sigList = ''; lastCorr = 0; }; });
+    box.querySelector('#compBorrar').onclick = () => { const all = ls.get('escultorCompas', {}); delete all[keyCompas()]; ls.set('escultorCompas', all); abrirCompas(); M.sigList = ''; };
+    E.openSheet('sComp');
+  }
+  (() => {
+    const d = document.createElement('div'); d.className = 'sheet'; d.id = 'sComp';
+    d.innerHTML = '<h2><span id="sCompTit">Medir con compás</span> <button data-close>✕</button></h2><div id="sCompBody"></div>';
+    document.body.appendChild(d); d.querySelector('[data-close]').onclick = () => d.classList.remove('open');
+    const g = document.querySelector('#sMas .grid3');
+    const mk = (id, txt, fn) => { const b = document.createElement('button'); b.id = id; b.textContent = txt; b.onclick = fn; g.appendChild(b); return b; };
+    mk('bCompas', '🧭 Medir con compás', () => { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); abrirCompas(); });
+    const br = mk('bRegla', '📏 Regla (2 toques)', () => { M.regla = !M.regla; M.reglaP = null; br.classList.toggle('on', M.regla); document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); E.flash([[M.regla ? '📏 Toca un borde y luego el otro para medir. Vuelve a pulsar Regla para terminar.' : 'Regla desactivada.', '']], 5000); });
+    mk('bReglaDel', '🧹 Borrar reglas', () => { vstate().reglas = []; M.reglaP = null; });
+    mk('bBarro', '🎨 Tocar el barro', () => { M.pickClay = true; document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); E.flash([['🎨 Toca una zona del barro (bien iluminada) para aprender su color.', '']], 6000); });
+    mk('bBordes', '↺ Bordes automáticos', () => { vstate().edges = {}; M.hist = {}; M.clay = null; ls.set('escultorBarro', null); E.flash([['Bordes y color del barro restablecidos.', 'ok']], 3000); });
+  })();
+
+  // ======================= Datos para entrenar un detector propio =======================
+  let tdb = null;
+  const trainDB = () => tdb || (tdb = new Promise((res, rej) => { const r = indexedDB.open('escultor-train', 1); r.onupgradeneeded = () => r.result.createObjectStore('ej', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const ttx = async (mode, fn) => { const d = await trainDB(); return new Promise((res, rej) => { const t = d.transaction('ej', mode); const q = fn(t.objectStore('ej')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+  async function contarEjemplos() { try { return await ttx('readonly', st => st.count()); } catch (e) { return 0; } }
+  async function guardarEjemplo() {
+    const src = E.fuente(); if (!src) { E.flash([['Primero abre una foto o congela la cámara sobre tu escultura.', 'warn']], 4000); return; }
+    const W = E.fit.sw, H = E.fit.sh, k = Math.min(1, 1280 / Math.max(W, H));
+    const c = document.createElement('canvas'); c.width = Math.round(W * k); c.height = Math.round(H * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    const n = (q) => q ? { x: +(q.x / W).toFixed(5), y: +(q.y / H).toFixed(5) } : null;
+    const vs = vstate(), A = S.analysis;
+    const ej = {
+      id: 'e' + Date.now(), t: Date.now(), proyecto: M.proyecto, modo: S.modo, vista: S.view,
+      figura: { edad: S.edad, sexo: S.sexo, complexion: S.comp, altura_cm: S.altura },
+      cuerpo: A && A.M ? { origen: S.mode === 'manual' ? 'manual (corregido por ti)' : 'automático', puntos: Object.fromEntries(['top', 'chin', 'shL', 'shR', 'elL', 'elR', 'wrL', 'wrR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR'].map(kk => [kk, n(A.M[kk])])) } : null,
+      torso: vs.tpts && vs.tTouched ? Object.fromEntries(Object.entries(vs.tpts).map(([kk, q]) => [kk, n(q)])) : null,
+      orejas: vs.fpts && vs.fTouched ? Object.fromEntries(Object.entries(vs.fpts).map(([kk, q]) => [kk, n(q)])) : null,
+      bordes: (M.anchos || []).map(a => ({ id: a.id, A: n(a.A), B: n(a.B), corregido: !!a.man })),
+      color_barro: M.clay, compas_cm: valoresCompas(),
+    };
+    ej.img = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+    await ttx('readwrite', st => st.put(ej));
+    const tot = await contarEjemplos(); pintarBtnTrain(tot);
+    E.flash([[`🧠 Ejemplo guardado (${tot} en total). Lo más útil: fotos de tus esculturas con los puntos y bordes que corregiste a mano.`, 'ok']], 6000);
+  }
+  async function exportarEjemplos() {
+    const l = await ttx('readonly', st => st.getAll()) || [];
+    if (!l.length) { E.flash([['Aún no hay ejemplos guardados.', 'warn']], 4000); return; }
+    const b64 = (blob) => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    const datos = [];
+    for (const e of l) { const o = Object.assign({}, e); o.img = await b64(e.img); datos.push(o); }
+    const blob = new Blob([JSON.stringify({ app: 'ESCULTOR', version: 1, coordenadas: 'normalizadas 0–1 sobre la imagen', ejemplos: datos })], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `escultor-entrenamiento-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+    E.flash([[`⬇️ Exportados ${l.length} ejemplos. Guarda ese archivo: con él se puede entrenar un detector para tus esculturas.`, 'ok']], 7000);
+  }
+  let btnTrainExp = null;
+  function pintarBtnTrain(n) { if (btnTrainExp) btnTrainExp.textContent = `⬇️ Exportar datos de entrenamiento (${n})`; }
+  (() => {
+    const g = document.querySelector('#sMas .grid3');
+    const b1 = document.createElement('button'); b1.textContent = '🧠 Guardar ejemplo para entrenar'; b1.onclick = () => { document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); guardarEjemplo(); }; g.appendChild(b1);
+    btnTrainExp = document.createElement('button'); btnTrainExp.onclick = exportarEjemplos; g.appendChild(btnTrainExp);
+    contarEjemplos().then(pintarBtnTrain);
+  })();
 
   // ======================= Navegación y botones =======================
   function nav(n) {
