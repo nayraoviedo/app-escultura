@@ -7,10 +7,53 @@
 <link rel="icon" href="data:,">
 <title>Escultor · Maniquí guía</title>
 <style>
-  :root { --bg:#111; --panel:#1c1c1e; --txt:#f2f2f2; --muted:#a0a0a8; --acc:#4fc3f7; --ok:#3ddc84; --warn:#ffca28; --bad:#ff5252; }
+  :root { --bg:#0d1220; --panel:#161c2c; --txt:#f2f2f2; --muted:#a0a0a8; --acc:#4fc3f7; --ok:#3ddc84; --warn:#ffca28; --bad:#ff5252; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family: system-ui, -apple-system, Roboto, sans-serif; overflow:hidden; }
-  #stage { position:fixed; left:0; right:0; top:0; bottom:var(--barH, 132px); background:#000; touch-action:none; }
+  #stage { position:fixed; left:0; right:0; top:46px; bottom:var(--barH, 132px); background:#000; touch-action:none; }
+  /* barra superior: pestañas de vista (+ herramientas en escritorio) */
+  #top { position:fixed; left:0; right:0; top:0; height:46px; background:var(--panel); display:flex; align-items:center; padding:0 8px; gap:8px; overflow-x:auto; z-index:4; }
+  #topHead, #tools, #side, #panel { display:none; }
+  .tabs { display:flex; gap:6px; }
+  .tab { background:#222a3d; color:var(--txt); border:0; border-radius:999px; padding:7px 13px; font-size:14px; white-space:nowrap; }
+  .tab.on { background:var(--acc); color:#001018; font-weight:700; }
+  .tab .ok { color:var(--ok); margin-left:4px; }
+  .tab.on .ok { color:#003b1a; }
+  .tool { background:transparent; color:var(--muted); border:0; border-radius:10px; padding:8px 12px; font-size:14px; white-space:nowrap; }
+  .tool.on { background:#1d2a44; color:var(--acc); }
+  /* ---------- Escritorio / tablet horizontal ---------- */
+  @media (min-width: 1000px) {
+    body { background:#0a0f1c; }
+    #bar { display:none !important; }
+    #side { display:flex; flex-direction:column; position:fixed; left:0; top:0; bottom:0; width:220px; background:#0f1524; border-right:1px solid #1e2738; padding:18px 12px; gap:4px; overflow:auto; }
+    #side .brand { font-size:22px; font-weight:700; margin:0 8px 18px; }
+    #side .brand span { color:var(--acc); }
+    #side .grp { color:#5d6a85; font-size:12px; letter-spacing:.12em; margin:14px 10px 6px; }
+    #side button { display:flex; align-items:center; gap:12px; background:transparent; color:#cfd6e6; border:0; border-radius:10px; padding:11px 12px; font-size:15px; text-align:left; }
+    #side button:hover { background:#18213a; }
+    #side button.on { background:#14304a; color:var(--acc); box-shadow:inset 3px 0 0 var(--acc); }
+    #top { left:220px; right:360px; height:124px; background:transparent; flex-direction:column; align-items:stretch; padding:14px 18px 0; gap:8px; overflow:visible; }
+    #topHead { display:block; }
+    #topHead h1 { margin:0; font-size:21px; }
+    #topHead div { color:var(--muted); font-size:14px; margin-top:2px; }
+    #tools { display:flex; gap:4px; background:#121a2b; border-radius:12px; padding:4px; align-self:flex-start; }
+    #stage { left:236px; right:376px; top:136px; bottom:16px; border-radius:16px; overflow:hidden; border:1px solid #1e2738; }
+    #panel { display:block; position:fixed; right:0; top:0; bottom:0; width:360px; background:#0f1524; border-left:1px solid #1e2738; padding:16px; overflow:auto; }
+    .box { background:#141c2e; border:1px solid #1e2738; border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+    .box h3 { margin:0 0 8px; font-size:12px; letter-spacing:.12em; color:#8ea0c0; font-weight:600; }
+    .pt { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:9px; font-size:14px; cursor:pointer; }
+    .pt:hover { background:#18213a; } .pt.sel { background:#14304a; outline:1px solid var(--acc); }
+    .pt .c { margin-left:auto; font-family:ui-monospace, monospace; font-size:12px; color:var(--ok); }
+    .pt .c.lo { color:var(--warn); } .pt .c.na { color:#6b7890; }
+    .kv { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; color:#cfd6e6; }
+    .kv b { font-family:ui-monospace, monospace; font-weight:500; }
+    .prog { height:4px; background:#1e2738; border-radius:4px; margin:6px 0 8px; } .prog i { display:block; height:100%; background:var(--acc); border-radius:4px; }
+    #panel .seg button { padding:8px 6px; font-size:13px; }
+    #panel table { font-size:13px; } #panel td, #panel th { padding:6px 3px; }
+    #card { position:static !important; display:block; margin:0 0 12px; max-width:none; box-shadow:none; background:#141c2e; }
+    .sheet { left:auto; right:376px; width:440px; top:70px; bottom:auto; max-height:calc(100% - 90px); border-radius:16px; transform:none; opacity:0; pointer-events:none; transition:opacity .15s; }
+    .sheet.open { opacity:1; pointer-events:auto; }
+  }
   #cv { width:100%; height:100%; display:block; }
   #refLayer { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
   #refLayer.edit { pointer-events:auto; outline:3px dashed var(--acc); outline-offset:-3px; }
@@ -64,6 +107,45 @@
 </style>
 </head>
 <body>
+<aside id="side">
+  <div class="brand">🗿 Escul<span>tor</span></div>
+  <div class="grp">TRABAJO</div>
+  <button data-for="bCam">📷 Cámara en vivo</button>
+  <button data-for="bFoto">🖼️ Abrir foto</button>
+  <button data-for="bFreeze">⏸️ Congelar / seguir</button>
+  <div class="grp">REFERENCIAS</div>
+  <button data-for="bCalco">🗺️ Calco</button>
+  <button data-act="biblio">📚 Biblioteca</button>
+  <div class="grp">AJUSTES</div>
+  <button data-for="bSet">🧍 Figura y canon</button>
+  <button data-for="bVoice">🔊 Voz</button>
+  <button data-act="ayuda">❓ Ayuda</button>
+</aside>
+
+<div id="top">
+  <div id="topHead"><h1>Análisis de proporciones</h1><div id="ptCount">Coloca la figura frente a la cámara</div></div>
+  <div class="tabs" id="views">
+    <button class="tab" data-v="front">Frente</button><button class="tab" data-v="right">Lado der.</button><button class="tab" data-v="left">Lado izq.</button><button class="tab" data-v="back">Espalda</button>
+  </div>
+  <div id="tools">
+    <button class="tool" data-for="bMode">🤖 Auto / ✋ Manual</button>
+    <button class="tool" id="tPts">◎ Puntos</button>
+    <button class="tool" id="tLines">📏 Líneas</button>
+    <button class="tool" data-for="bGhost">🧍 Maniquí</button>
+    <button class="tool" data-for="bMirror">↔️ Espejo</button>
+    <button class="tool" data-for="bPlumb">📐 Plomada</button>
+    <button class="tool" data-for="bContrast">◐ Contraste</button>
+  </div>
+</div>
+
+<aside id="panel">
+  <div id="pCardSlot"></div>
+  <div class="box"><h3 id="pPtsTitle">PUNTOS DE REFERENCIA — FRENTE</h3><div class="prog"><i id="pProg" style="width:0"></i></div><div id="pPts"></div></div>
+  <div class="box"><h3>CALIBRACIÓN</h3><div id="pCal"></div>
+    <div class="seg" style="margin-top:8px"><button data-for="bSet">⚙️ Figura y canon</button><button data-for="bMode">🤖 / ✋ Modo</button></div></div>
+  <div class="box"><h3>MEDIDAS EN VIVO</h3><div id="pMedRes" class="note" style="font-size:13px"></div><table id="pMed"></table></div>
+</aside>
+
 <div id="stage">
   <canvas id="cv"></canvas>
   <div id="refLayer"><img id="refImg" alt=""></div>
@@ -128,7 +210,7 @@
   <h2>Calco (imagen de referencia) <button data-close>✕</button></h2>
   <button class="big" id="bRefLoad">Elegir imagen de referencia</button>
   <div class="row"><label>Opacidad</label><input type="range" id="refOp" min="0" max="1" step="0.05" value="0.5"></div>
-  <div class="row seg"><button id="bRefLock">🔓 Mover imagen</button><button id="bRefReset">Centrar</button><button id="bRefHide">Ocultar</button></div>
+  <div class="row seg"><button id="bRefLock">🔓 Mover imagen</button><button id="bRefAlign">🎯 Alinear</button><button id="bRefReset">Centrar</button><button id="bRefHide">Ocultar</button></div>
   <p class="note">Con <b>Mover imagen</b> activo: un dedo arrastra, dos dedos agrandan y giran. Pulsa otra vez para bloquearla: queda fija y puedes seguir trabajando.</p>
 </div>
 

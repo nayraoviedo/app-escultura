@@ -25,6 +25,7 @@
     lastSpeak: 0, lastMsg: '',
     ref: { tx: 0, ty: 0, s: 1, r: 0, edit: false, shown: true, has: false },
     sm: {}, focus: null, compact: false,
+    view: 'front', views: { front: {}, right: {}, left: {}, back: {} }, lines: false, pts: true, selPt: null,
     fuente: 'canon', custom: null,   // proporciones: canon clásico o "mi referencia" 
   };
   try { Object.assign(S, JSON.parse(localStorage.getItem('escultor') || '{}'), { src: null, frozen: false }); } catch (e) {}
@@ -47,6 +48,8 @@
   // Puntos del cuerpo que usamos (índices de MediaPipe Pose)
   const IDX = { shL: 11, shR: 12, elL: 13, elR: 14, wrL: 15, wrR: 16, hipL: 23, hipR: 24, knL: 25, knR: 26, anL: 27, anR: 28 };
   const KEYS = ['top', 'chin', 'shL', 'shR', 'elL', 'elR', 'wrL', 'wrR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR'];
+  const PCOL = { top: '#22d3ee', chin: '#22d3ee', shL: '#f59e0b', shR: '#f59e0b', elL: '#facc15', elR: '#facc15', wrL: '#facc15', wrR: '#facc15', hipL: '#10b981', hipR: '#10b981', knL: '#a855f7', knR: '#a855f7', anL: '#ec4899', anR: '#ec4899' };
+  const VNAME = { front: 'Frente', right: 'Lado derecho', left: 'Lado izquierdo', back: 'Espalda' };
   const KLABEL = { top: 'cráneo', chin: 'barbilla', shL: 'hombro izq', shR: 'hombro der', elL: 'codo izq', elR: 'codo der', wrL: 'muñeca izq', wrR: 'muñeca der', hipL: 'cadera izq', hipR: 'cadera der', knL: 'rodilla izq', knR: 'rodilla der', anL: 'tobillo izq', anR: 'tobillo der' };
 
   // Segmentos evaluados: [id, canonKey, a, b, lado]
@@ -107,6 +110,8 @@
     setOn('bFreeze', S.frozen); setOn('bGhost', S.ghost); setOn('bMirror', S.mirror);
     setOn('bPlumb', S.plumb); setOn('bContrast', S.contrast); setOn('bVoice', S.voice);
     setOn('bCalco', S.ref.has && S.ref.shown);
+    setTimeout(() => document.querySelectorAll('[data-for]').forEach(el => el.classList.toggle('on', $(el.dataset.for).classList.contains('on'))), 0);
+    if ($('tLines')) { $('tLines').classList.toggle('on', S.lines); $('tPts').classList.toggle('on', S.pts); }
     $('bMode').innerHTML = S.mode === 'auto' ? '<span class="i">🤖</span>Auto' : '<span class="i">✋</span>Manual';
     $('bFreeze').innerHTML = S.frozen ? '<span class="i">▶️</span>Seguir' : '<span class="i">⏸️</span>Congelar';
   }
@@ -130,7 +135,7 @@
     const f = e.target.files[0]; if (!f) return;
     const im = new Image();
     im.onload = () => {
-      stopCam(); S.sm = {}; S.focus = null; S.img = im; S.src = 'foto'; S.frozen = false; S.snap = null; S.lm = null; S.world = null;
+      stopCam(); S.sm = {}; S.focus = null; S.img = im; S.src = 'foto'; S.views[S.view].img = im; paintViews(); S.frozen = false; S.snap = null; S.lm = null; S.world = null;
       updateFit();
       if (S.mode === 'auto') detectStill(); else seedManual();
       refreshButtons();
@@ -141,7 +146,7 @@
     if (S.src !== 'cam') return;
     if (!S.frozen) {
       const c = document.createElement('canvas'); c.width = vid.videoWidth; c.height = vid.videoHeight;
-      c.getContext('2d').drawImage(vid, 0, 0); S.snap = c; S.frozen = true;
+      c.getContext('2d').drawImage(vid, 0, 0); S.snap = c; S.frozen = true; S.views[S.view].img = c; paintViews();
     } else { S.frozen = false; S.snap = null; }
     refreshButtons();
   };
@@ -154,19 +159,21 @@
     const pose = new Pose({ locateFile: (f) => (window.__MP_URLS && window.__MP_URLS[f]) || 'mp/' + f });
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     pose.onResults((r) => {
+      if (S.route === 'lib') { S.libRes = r; return; }
       if (S.route === 'ref') { RE.lm = r.poseLandmarks || null; RE.world = r.poseWorldLandmarks || null; return; }
       S.lm = r.poseLandmarks || null; S.world = r.poseWorldLandmarks || null;
       if (!S.lm) S.analysis = null;
     });
     S.pose = pose;
-    pose.initialize().then(() => { S.poseReady = true; S.poseLoading = false; if (S.src === 'foto') detectStill(); })
+    pose.initialize().then(() => { S.poseReady = true; S.poseLoading = false; if (S.src === 'foto' || S.frozen) detectStill(); })
       .catch((e) => { S.poseLoading = false; console.error(e); flash([['El detector no pudo iniciar en este navegador. Usa ✋ Manual.', 'bad']], 9000); });
   }
   async function detectStill() {
-    ensurePose(); if (!S.poseReady || !S.img) return;
+    const still = (S.frozen && S.snap) ? S.snap : S.img;
+    ensurePose(); if (!S.poseReady || !still) return;
     while (S.busy) await new Promise(r => setTimeout(r, 30));
     S.busy = true;
-    try { await S.pose.send({ image: S.img }); } catch (e) { console.error(e); }
+    try { await S.pose.send({ image: still }); } catch (e) { console.error(e); }
     S.busy = false;
     if (!S.lm) flash([['No encontré una figura en la foto. Prueba con ✋ Manual y coloca los puntos tú.', 'warn']], 9000);
   }
@@ -184,6 +191,7 @@
     const pt = (i) => (lm[i] && (lm[i].visibility ?? 1) > 0.45) ? P(lm[i].x * sw, lm[i].y * sh) : null;
     const o = {};
     for (const k in IDX) o[k] = pt(IDX[k]);
+    if (S.view === 'back') for (const k of ['sh', 'el', 'wr', 'hip', 'kn', 'an']) { const t = o[k + 'L']; o[k + 'L'] = o[k + 'R']; o[k + 'R'] = t; }
     // Cabeza estimada a partir de ojos y boca (en autom. no se califica, solo orienta)
     const eL = pt(2), eR = pt(5), mL = pt(9), mR = pt(10);
     if (eL && eR && mL && mR) {
@@ -277,6 +285,7 @@
       const A = M[a], B = M[b];
       if (!A || !B) continue;
       if (auto && (id === 'head' || id === 'neck')) continue; // cabeza estimada: no se califica
+      if ((S.view === 'left' || S.view === 'right') && (id === 'shW' || id === 'hipW')) continue; // de perfil no se ven los anchos
       if (base === 'cabeza' && id === 'head') { segs.push({ id, ck, side, ratio: 1, f: 1, A, B, isBase: true }); continue; }
       if (base === 'tronco' && id === 'torso') { segs.push({ id, ck, side, ratio: 1, f: F('torso'), A, B, isBase: true }); continue; }
       const f = F(id);
@@ -397,11 +406,39 @@
       line(a, b, foc ? 9 : 4, c);
     }
     if (foc) drawFocus(foc);
+    if (S.lines) drawLines(A);
     const pts = S.mode === 'manual' ? KEYS : KEYS.filter(k => M[k] && !(M.headEst && (k === 'top' || k === 'chin')));
-    for (const k of pts) if (M[k]) circle(toScr(M[k]), S.mode === 'manual' ? 13 : 7, S.mode === 'manual' ? 'rgba(255,255,255,0.25)' : '#fff', S.mode === 'manual' ? '#fff' : null);
+    if (S.pts || S.mode === 'manual') for (const k of pts) if (M[k]) {
+      const q = toScr(M[k]);
+      if (k === S.selPt) circle(q, 20 + 3 * Math.sin(performance.now() / 150), null, '#fff');
+      circle(q, S.mode === 'manual' ? 12 : 8, PCOL[k], 'rgba(0,0,0,.5)');
+    }
     if (S.mode === 'manual') {
       if (drag) label(toScr(M[drag]), KLABEL[drag], '#4fc3f7');
       else if (performance.now() < labelsUntil) for (const k of KEYS) label(toScr(M[k]), KLABEL[k]);
+    }
+  }
+
+  function drawLines(A) {
+    const C = A.C, cmCab = S.altura / C.H;
+    ctx.font = '600 13px system-ui';
+    for (const s of A.segs) {
+      if (s.isBase && s.id !== 'torso' && s.id !== 'head') continue;
+      const a = toScr(s.A), b = toScr(s.B), m = mid(a, b);
+      const t = s.st === 'gray' ? '?' : fmt(s.ratio * C[s.ck] * cmCab) + ' cm';
+      const w = ctx.measureText(t).width;
+      ctx.fillStyle = 'rgba(10,15,28,.8)'; ctx.fillRect(m.x - w / 2 - 5, m.y - 10, w + 10, 20);
+      ctx.fillStyle = COL[s.st] || '#fff'; ctx.fillText(t, m.x - w / 2, m.y + 5);
+    }
+    // ángulos de codos y rodillas
+    const M = A.M;
+    for (const [a, j, b] of [['shL', 'elL', 'wrL'], ['shR', 'elR', 'wrR'], ['hipL', 'knL', 'anL'], ['hipR', 'knR', 'anR']]) {
+      if (!M[a] || !M[j] || !M[b]) continue;
+      const v1 = sub(M[a], M[j]), v2 = sub(M[b], M[j]);
+      const ang = Math.acos(Math.max(-1, Math.min(1, dot(norm(v1), norm(v2))))) * 180 / Math.PI;
+      const q = add(toScr(M[j]), P(12, -14)), t = ang.toFixed(1).replace('.', ',') + '°', w = ctx.measureText(t).width;
+      ctx.fillStyle = 'rgba(10,15,28,.8)'; ctx.fillRect(q.x - 4, q.y - 13, w + 8, 18);
+      ctx.fillStyle = ang > 165 ? '#3ddc84' : '#ff8a80'; ctx.fillText(t, q.x, q.y);
     }
   }
 
@@ -546,6 +583,9 @@
   let lastTable = 0;
   function renderTable(A) {
     const now = performance.now(); if (now - lastTable < 500 || !$('sMed').classList.contains('open')) return; lastTable = now;
+    const T = tableHTML(A); $('medTabla').innerHTML = T.html; $('medResumen').innerHTML = T.res;
+  }
+  function tableHTML(A) {
     const C = canonActual();
     const cmPorCab = S.altura / C.H;
     let html = `<tr><th>Parte</th><th class="num">Canon</th><th class="num">Medido</th></tr>`;
@@ -556,11 +596,77 @@
       const meas = s ? (s.isBase ? '<span class="dot" style="background:' + COL.base + '"></span>base' : `<span class="dot" style="background:${COL[s.st]}"></span>${(s.ratio * C[ck] * cmPorCab).toFixed(1)} cm<br><small>${s.st === 'gray' ? 'escorzo fuerte' : (s.ratio >= 1 ? '+' : '') + Math.round((s.ratio - 1) * 100) + '%'}</small>`) : '—';
       html += `<tr><td><details><summary>${info.label}${side ? ' ' + side + '.' : ''}</summary><p>${info.tip}</p></details></td><td class="num">${(C[ck] * cmPorCab).toFixed(1)} cm<br><small>${(+C[ck].toFixed(2))} cab.</small></td><td class="num">${meas}</td></tr>`;
     }
-    $('medTabla').innerHTML = html;
-    $('medResumen').innerHTML = `<b>${CANON.base[S.edad].label}</b>${S.edad === 'bebe' || S.edad === 'nino' ? '' : ' · ' + S.sexo} · ${S.comp} · ${C.H} cabezas · ${S.altura} cm → <b>1 cabeza = ${cmPorCab.toFixed(2)} cm</b>` +
+    return { html, res: `<b>${CANON.base[S.edad].label}</b>${S.edad === 'bebe' || S.edad === 'nino' ? '' : ' · ' + S.sexo} · ${S.comp} · ${C.H} cabezas · ${S.altura} cm → <b>1 cabeza = ${cmPorCab.toFixed(2)} cm</b>` +
       (A ? `<br>Medida base: <b>${A.base}</b>${A.alturaCab ? ` · Tu figura, de pie, mediría ≈ <b>${A.alturaCab.toFixed(1)} cabezas</b> (canon ${C.H})` : ''}` : '<br>Apunta a la figura (o pon los puntos en modo manual) para ver lo medido.') +
-      (A && A.auto ? '<br><small>En automático la cabeza no se califica (se estima por la cara). Para medir la cabeza usa ✋ Manual.</small>' : '');
+      (A && A.auto ? '<br><small>En automático la cabeza no se califica (se estima por la cara). Para medir la cabeza usa ✋ Manual.</small>' : '') };
   }
+
+  // ---------- Escritorio: panel derecho ----------
+  const desk = () => window.matchMedia('(min-width: 1000px)').matches;
+  function layout() {
+    const card = $('card');
+    if (desk()) { if (card.parentNode !== $('pCardSlot')) $('pCardSlot').appendChild(card); }
+    else if (card.parentNode !== document.body) document.body.appendChild(card);
+    resize();
+  }
+  window.addEventListener('resize', layout);
+  let lastPanel = 0;
+  function renderPanel(A) {
+    const now = performance.now(); if (!desk() || now - lastPanel < 300) return; lastPanel = now;
+    const lm = S.lm, M = A && A.M;
+    let n = 0, html = '';
+    for (const k of KEYS) {
+      const p = M && M[k];
+      let conf = '—', cls = 'na';
+      if (p) {
+        n++;
+        if (S.mode === 'manual') { conf = 'manual'; cls = ''; }
+        else if ((k === 'top' || k === 'chin')) { conf = 'estimado'; cls = 'lo'; }
+        else if (lm && lm[IDX[k]]) { const v = Math.round((lm[IDX[k]].visibility ?? 1) * 100); conf = v + '%'; cls = v < 70 ? 'lo' : ''; }
+      }
+      html += `<div class="pt${k === S.selPt ? ' sel' : ''}" data-k="${k}"><span class="dot" style="background:${PCOL[k]}"></span>${KLABEL[k][0].toUpperCase() + KLABEL[k].slice(1)}<span class="c ${cls}">${conf}</span></div>`;
+    }
+    $('pPts').innerHTML = html;
+    $('pPtsTitle').textContent = 'PUNTOS DE REFERENCIA — ' + VNAME[S.view].toUpperCase();
+    $('pProg').style.width = (n / KEYS.length * 100) + '%';
+    $('ptCount').textContent = A ? `Puntos colocados — ${n}/${KEYS.length} · Vista: ${VNAME[S.view]} · Modo ${S.mode === 'auto' ? 'automático' : 'manual'}` : 'Abre la cámara o una foto de tu escultura';
+    const C = canonActual(), cmCab = S.altura / C.H;
+    $('pCal').innerHTML = `<div class="kv">Altura final<b>${S.altura} cm</b></div><div class="kv">Canon<b>${C.esRef ? 'Mi referencia' : CANON.base[S.edad].label.split(' (')[0]} · ${C.H.toFixed(1)} cab.</b></div><div class="kv">1 cabeza<b>${fmt(cmCab)} cm</b></div>` +
+      (A ? `<div class="kv">Escala<b>${(cmCab / A.u).toFixed(3)} cm/px</b></div><div class="kv">Medida base<b>${A.base}</b></div>` + (A.alturaCab ? `<div class="kv">Figura de pie ≈<b>${A.alturaCab.toFixed(1)} cabezas</b></div>` : '') : '');
+    const T = tableHTML(A); $('pMed').innerHTML = T.html; $('pMedRes').innerHTML = T.res;
+  }
+  $('pPts').addEventListener('click', (e) => { const el = e.target.closest('.pt'); if (el) { S.selPt = S.selPt === el.dataset.k ? null : el.dataset.k; lastPanel = 0; } });
+
+  function paintViews() {
+    document.querySelectorAll('#views .tab').forEach(b => {
+      const v = b.dataset.v; b.classList.toggle('on', v === S.view);
+      b.innerHTML = VNAME[v].replace('Lado derecho', 'Lado der.').replace('Lado izquierdo', 'Lado izq.') + (S.views[v].img ? '<span class="ok">✓</span>' : '');
+    });
+  }
+  function toCanvas(img) { if (img instanceof HTMLCanvasElement) return img; const c = document.createElement('canvas'); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height; c.getContext('2d').drawImage(img, 0, 0); return c; }
+  function switchView(v) {
+    if (v === S.view) return;
+    const cur = S.views[S.view];
+    cur.manual = S.manual; cur.lm = S.lm; cur.world = S.world;
+    S.view = v; const nx = S.views[v];
+    S.focus = null; S.sm = {}; S.selPt = null;
+    S.manual = nx.manual || null; S.lm = nx.lm || null; S.world = nx.world || null;
+    if (nx.img) {
+      S.snap = toCanvas(nx.img); S.frozen = true;
+      if (S.src !== 'cam') { S.src = 'foto'; S.img = nx.img; }
+      if (S.mode === 'auto' && !nx.lm) detectStill();
+    } else {
+      S.frozen = false; S.snap = null;
+      if (S.src === 'cam') flash([[`Vista «${VNAME[v]}»: gira la escultura (o muévete) y pulsa ⏸️ Congelar para guardarla.`, '']], 7000);
+      else { S.img = null; S.src = null; flash([[`Vista «${VNAME[v]}»: abre la cámara o una foto de la escultura vista desde ${v === 'front' ? 'el frente' : v === 'back' ? 'atrás' : 'el ' + VNAME[v].toLowerCase()}.`, '']], 7000); }
+    }
+    paintViews(); refreshButtons(); lastPanel = 0;
+  }
+  document.querySelectorAll('#views .tab').forEach(b => b.onclick = () => switchView(b.dataset.v));
+  $('tLines').onclick = () => { S.lines = !S.lines; refreshButtons(); };
+  $('tPts').onclick = () => { S.pts = !S.pts; refreshButtons(); };
+  document.querySelectorAll('[data-for]').forEach(el => el.addEventListener('click', () => $(el.dataset.for).click()));
+  document.querySelectorAll('[data-act="ayuda"]').forEach(el => el.onclick = () => openSheet('sHelp'));
 
   // ---------- Bucle principal ----------
   function frame() {
@@ -581,7 +687,7 @@
       }
     }
     if (!has) $('card').style.display = 'none';
-    renderTable(A);
+    renderTable(A); renderPanel(A);
     if (flashMsg && performance.now() < flashMsg.until) info = flashMsg.list.concat(info);
     pills(info.filter(i => i[0]).slice(0, 3));
     requestAnimationFrame(frame);
@@ -746,15 +852,35 @@
     refreshButtons();
   }
   $('bRefLoad').onclick = () => $('fRef').click();
-  $('fRef').onchange = (e) => {
-    const f = e.target.files[0]; if (!f) return;
+  function setCalco(url, pts) {
     refImg.onload = () => {
       const k = Math.min(cw / refImg.naturalWidth, ch / refImg.naturalHeight) * 0.9;
-      refImg.style.width = refImg.naturalWidth * k + 'px';
-      Object.assign(S.ref, { tx: 0, ty: 0, s: 1, r: 0, has: true, shown: true, edit: true }); paintRef();
+      S.ref.k = k; refImg.style.width = refImg.naturalWidth * k + 'px';
+      Object.assign(S.ref, { tx: 0, ty: 0, s: 1, r: 0, has: true, shown: true, edit: true, pts: pts || null }); paintRef();
       $('sCalco').classList.remove('open');
+      if (pts && S.analysis) flash([['Consejo: en 🗺️ Calco pulsa 🎯 Alinear para encajar la referencia sobre tu escultura.', '']], 6000);
     };
-    refImg.src = URL.createObjectURL(f); e.target.value = '';
+    refImg.src = url;
+  }
+  $('fRef').onchange = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    setCalco(URL.createObjectURL(f)); e.target.value = '';
+  };
+  // Alinear: hombros y caderas de la referencia sobre los de la escultura
+  $('bRefAlign').onclick = () => {
+    const A = S.analysis, rp = S.ref.pts;
+    if (!S.ref.has || !rp) { flash([['Para alinear, envía la referencia desde 📚 Biblioteca después de analizarla como Cuerpo.', 'warn']], 6000); return; }
+    if (!A) { flash([['Primero apunta a tu escultura para que se detecte la pose.', 'warn']], 5000); return; }
+    const a1 = mid(rp.shL, rp.shR), a2 = mid(rp.hipL, rp.hipR);
+    const b1 = toScr(A.M.midSh), b2 = toScr(A.M.midHip);
+    const W = refImg.naturalWidth, H = refImg.naturalHeight, k = S.ref.k || 1;
+    const va = sub(a2, a1), vb = sub(b2, b1);
+    const sc = len(vb) / (len(va) * k), r = Math.atan2(vb.y, vb.x) - Math.atan2(va.y, va.x);
+    const loc = P((a1.x - W / 2) * k * sc, (a1.y - H / 2) * k * sc);
+    const rot = P(loc.x * Math.cos(r) - loc.y * Math.sin(r), loc.x * Math.sin(r) + loc.y * Math.cos(r));
+    Object.assign(S.ref, { s: sc, r, tx: b1.x - cw / 2 - rot.x, ty: b1.y - ch / 2 - rot.y, edit: false, shown: true });
+    paintRef(); $('sCalco').classList.remove('open');
+    flash([['🎯 Referencia alineada con hombros y caderas de tu escultura.', 'ok']], 5000);
   };
   $('refOp').oninput = paintRef;
   $('bRefLock').onclick = () => { S.ref.edit = !S.ref.edit; paintRef(); if (S.ref.edit) $('sCalco').classList.remove('open'); };
@@ -781,9 +907,23 @@
   // ---------- Inicio ----------
   // Barra de 2 filas: ajustar altura
   document.documentElement.style.setProperty('--barH', (132) + 'px');
-  resize(); paintSet(); paintRef(); refreshButtons();
+  resize(); paintSet(); paintRef(); refreshButtons(); paintViews(); layout();
   if (S.mode === 'auto') ensurePose();
   requestAnimationFrame(frame);
   // API de prueba
   window.__escultor = { S, analyze };
+  // API para la Biblioteca
+  async function detectPoseOn(img) {
+    ensurePose();
+    for (let i = 0; i < 300 && !S.poseReady; i++) await new Promise(r => setTimeout(r, 100));
+    if (!S.poseReady) return null;
+    while (S.busy) await new Promise(r => setTimeout(r, 30));
+    S.busy = true; S.route = 'lib'; S.libRes = null;
+    try { await S.pose.send({ image: img }); } catch (e) { console.error(e); }
+    S.route = null; S.busy = false; S.sm = {};
+    const r = S.libRes; S.libRes = null;
+    return r && r.poseLandmarks ? { lm: r.poseLandmarks, world: r.poseWorldLandmarks } : null;
+  }
+  function useProportions(img) { RE.img = img; RE.pts = null; reOpen(); reDetect(); }
+  window.Escultor = { detectPoseOn, setCalco, useProportions, canon: canonActual, flash, IDX, closeSheets: () => document.querySelectorAll('.sheet').forEach(x => x.classList.remove('open')) };
 })();
