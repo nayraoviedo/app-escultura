@@ -516,14 +516,38 @@
     for (const s of A.segs) if (s.st === 'bad' || s.st === 'warn') if (!w || Math.abs(s.ratio - 1) > Math.abs(w.ratio - 1)) w = s;
     return w;
   }
+  // Voz: elige una voz en español, evita el fallo de Chrome (cancel + speak seguidos) y avisa si no hay voces
+  let voces = [];
+  const cargarVoces = () => { try { voces = speechSynthesis.getVoices() || []; } catch (e) { voces = []; } };
+  if (window.speechSynthesis) { cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
+  function vozES() {
+    if (!voces.length) cargarVoces();
+    const es = voces.filter(v => /^es([-_]|$)/i.test(v.lang));
+    return es.find(v => /419|MX|US|BO|AR|CO|PE|CL/i.test(v.lang)) || es.find(v => /ES/i.test(v.lang)) || es[0] || null;
+  }
+  function hablar(msg, avisar, alTerminar) {
+    if (!window.speechSynthesis) { if (avisar) flash([['Este navegador no puede leer en voz alta.', 'warn']], 5000); return false; }
+    const texto = String(msg).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+    const v = vozES();
+    if (avisar && !voces.length) flash([['Tu navegador no tiene voces instaladas, por eso no suena. En el celular Android sí funciona. En Linux instala «speech-dispatcher» (o usa Chrome en Android).', 'warn']], 9000);
+    try { speechSynthesis.cancel(); } catch (e) {}
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(texto);
+      if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'es-ES';
+      u.rate = 1;
+      u.onend = () => alTerminar && alTerminar();
+      u.onerror = (e) => { if (alTerminar) alTerminar(); if (avisar && e.error !== 'interrupted' && e.error !== 'canceled') flash([[e.error === 'synthesis-failed' || !voces.length ? 'Tu navegador no tiene voces instaladas, por eso no suena. En el celular Android sí funciona. En una computadora con Linux instala «speech-dispatcher» y reinicia Chrome.' : 'No se pudo leer en voz alta (' + e.error + ').', 'warn']], 9000); };
+      try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) { if (alTerminar) alTerminar(); }
+    }, 80);
+    return true;
+  }
   function say(msg) {
     if (!S.voice || !window.speechSynthesis) return;
     const now = performance.now();
     if (msg === S.lastMsg && now - S.lastSpeak < 15000) return;
     if (now - S.lastSpeak < 4000) return;
     S.lastSpeak = now; S.lastMsg = msg;
-    const ut = new SpeechSynthesisUtterance(msg); ut.lang = 'es-ES'; ut.rate = 1;
-    speechSynthesis.cancel(); speechSynthesis.speak(ut);
+    hablar(msg);
   }
 
   // ---------- Tarjeta guía (una corrección a la vez) ----------
@@ -812,7 +836,7 @@
   };
   $('bVoice').onclick = () => {
     S.voice = !S.voice; refreshButtons();
-    if (S.voice && window.speechSynthesis) { const u = new SpeechSynthesisUtterance('Voz activada'); u.lang = 'es-ES'; speechSynthesis.speak(u); }
+    if (S.voice) hablar('Voz activada', true);
   };
   $('bMed').onclick = () => { lastTable = 0; openSheet('sMed'); };
   $('bSet').onclick = () => openSheet('sSet');
@@ -913,7 +937,7 @@
   window.__escultor = { S, analyze };
   // API para modos.js
   window.EscAPI = {
-    S, ctx, toScr, toImg, line, circle, label, arrow, canonActual, say, explicar, correcciones, COL, NOMBRE, flash, openSheet, refreshButtons, startCam, stopCam, detectStill, ensurePose, seedManual, PCOL, KLABEL, VNAME,
+    S, ctx, toScr, toImg, line, circle, label, arrow, canonActual, say, hablar, explicar, correcciones, COL, NOMBRE, flash, openSheet, refreshButtons, startCam, stopCam, detectStill, ensurePose, seedManual, PCOL, KLABEL, VNAME,
     get fit() { return fit; }, get cw() { return cw; }, get ch() { return ch; }, get vid() { return vid; },
     fuente: () => (S.frozen && S.snap) ? S.snap : (S.src === 'cam' ? (vid.readyState >= 2 ? vid : null) : (S.src === 'foto' ? S.img : null)),
     poseState: () => ({ ready: S.poseReady, loading: S.poseLoading }),
