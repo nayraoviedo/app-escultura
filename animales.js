@@ -114,6 +114,34 @@
       med: [['Altura a la cruz', 'cruz', 'pataD', 3.0, 'v', 'Cabeza de águila (más pequeña que la de león): el cuerpo mide ≈ 3 cabezas de alto.'], ['Ala (raíz→punta)', 'alaR', 'alaP', 3.5, 'd', 'Alas de águila proporcionadas al cuerpo de león.']],
       unionTxt: 'La mitad delantera es de águila (cabeza, alas y patas con garras) y la trasera de león: la transición va en el pecho, con plumas que se vuelven pelaje.' },
   });
+  const TIO = [['hCab', 'Cabeza (arriba)', .5, 0], ['hBar', 'Barbilla', .5, .18], ['cuI', 'Punta del cuerno izq.', .66, -.14], ['cuD', 'Punta del cuerno der.', .34, -.14], ['hHomI', 'Hombro izq.', .7, .27], ['hHomD', 'Hombro der.', .3, .27], ['munI', 'Mano izq.', .8, .6], ['munD', 'Mano der.', .2, .6], ['hOmb', 'Ombligo', .5, .5], ['asi', 'Asiento', .5, .72], ['rodI', 'Rodilla izq.', .72, .68], ['rodD', 'Rodilla der.', .28, .68], ['pieI', 'Pie izq. (suelo)', .72, .98], ['pieD', 'Pie der. (suelo)', .28, .98]];
+  Object.assign(ESP, {
+    anchanchu: { grupo: 'andino', nombre: 'Anchanchu', cab: ['hCab', 'hBar'], pts: CUERPO_H(false), huesos: [['hCab', 'hBar'], ['hBar', 'hOmb']].concat(HUESOS_H),
+      med: [['Altura total', 'hCab', 'pieI', 4.0, 'v', 'Pequeño, de cabeza grande: unas 4 cabezas.'], ['Ancho de hombros', 'hHomI', 'hHomD', 1.4, 'd', 'Hombros estrechos y caídos de anciano.'], ['Pierna (entrepierna→suelo)', 'hPub', 'pieI', 1.4, 'v', 'Piernas cortas, a menudo algo arqueadas.']],
+      cultura: 'En la tradición aimara, el Anchanchu es un espíritu de los lugares solitarios —cuevas, quebradas, ríos y casas abandonadas—. Suele describirse como un viejito pequeño, de cabeza grande y sonrisa engañosa, que confunde a los viajeros.',
+      unionTxt: 'Exagera la cabeza y la sonrisa frente a un cuerpo menudo y encorvado: el contraste da el carácter inquietante.' },
+    tio: { grupo: 'andino', nombre: 'Tío de la mina (Potosí, Oruro)', cab: ['hCab', 'hBar'], union: true, pts: TIO,
+      huesos: [['hCab', 'hBar'], ['hCab', 'cuI'], ['hCab', 'cuD'], ['hBar', 'hOmb'], ['hHomI', 'hHomD'], ['hHomI', 'munI'], ['hHomD', 'munD'], ['hOmb', 'asi'], ['asi', 'rodI'], ['asi', 'rodD'], ['rodI', 'pieI'], ['rodD', 'pieD']],
+      med: [['Cuerno', 'hCab', 'cuI', 0.7, 'd', 'Cuernos cortos y gruesos, curvados hacia fuera.'], ['Altura sentado (cabeza→asiento)', 'hCab', 'asi', 3.0, 'v', 'Figura sentada de cabeza grande: el tronco es corto.'], ['Ancho de hombros', 'hHomI', 'hHomD', 2.2, 'd', 'Hombros anchos y robustos.'], ['Rodilla→suelo', 'rodI', 'pieI', 1.6, 'v', 'Piernas cortas, rodillas abiertas.']],
+      cultura: 'En las minas de Potosí y Oruro, el Tío es el dueño del interior de la montaña. Los mineros lo modelan en barro, sentado, con cuernos y ojos brillantes, y le ofrecen coca, alcohol y cigarros pidiendo protección y buenas vetas.',
+      unionTxt: 'Cabeza grande con boca abierta (donde se ponen las ofrendas), ojos saltones —a veces de vidrio o foco— y cuernos que salen de la frente; el cuerpo sentado es un bloque firme sobre su asiento.' },
+    pachamama: { grupo: 'andino', nombre: 'Pachamama', cab: ['hCab', 'hBar'], union: true,
+      pts: CUERPO_H(false).concat([['cadI', 'Cadera izq.', .63, .5], ['cadD', 'Cadera der.', .37, .5]]), huesos: [['hCab', 'hBar'], ['hBar', 'hOmb'], ['cadI', 'cadD']].concat(HUESOS_H),
+      med: [['Altura total', 'hCab', 'pieI', 7.0, 'v', 'Canon femenino natural.'], ['Ancho de hombros', 'hHomI', 'hHomD', 1.6, 'd', 'Hombros más estrechos que las caderas.'], ['Ancho de caderas', 'cadI', 'cadD', 1.9, 'd', 'Caderas anchas: la fertilidad de la tierra.']],
+      cultura: 'La Pachamama es la Madre Tierra andina, a quien se agradece y se ofrenda (sobre todo en agosto). No tiene una forma fija: se la representa a menudo como una mujer de cuerpo ancho y fecundo, con pollera y trenzas, rodeada o cubierta de frutos de la tierra, o como la propia tierra.',
+      unionTxt: 'Si la figura se funde con la tierra, haz que el borde de la pollera o el cabello se conviertan en surcos, raíces o cerros: la transición es el mensaje.' },
+    jichi: { grupo: 'andino', nombre: 'Jichi · dueño del agua (oriente)', cab: ['aNuca', 'aHoc'],
+      pts: [['aNuca', 'Nuca', .1, .4], ['aHoc', 'Hocico', 0, .48], ['c1', 'Cuello', .22, .55], ['c2', 'Cuerpo 1', .38, .4], ['c3', 'Cuerpo 2', .55, .62], ['c4', 'Cuerpo 3', .74, .45], ['cola', 'Punta de la cola', .97, .65]],
+      huesos: [['aNuca', 'aHoc'], ['aNuca', 'c1'], ['c1', 'c2'], ['c2', 'c3'], ['c3', 'c4'], ['c4', 'cola']],
+      med: [['Largo total (nuca→cola, en línea recta)', 'aNuca', 'cola', 10, 'd', 'Una serpiente grande: unos 10 largos de cabeza aunque esté ondulada.']],
+      cultura: 'En el oriente boliviano (Chiquitanía, Moxos), el Jichi es el espíritu dueño y protector del agua de lagunas, ríos y pozos. Se dice que toma forma de serpiente —a veces de saurio o de jaguar— y que, si se lo maltrata, el agua se va.',
+      unionTxt: 'Si lo combinas con agua, deja que las ondas del cuerpo continúen en el agua tallada: el Jichi y el agua son lo mismo.' },
+    achachila: { grupo: 'andino', nombre: 'Achachila (abuelo de la montaña)', cab: ['hCab', 'hBar'], union: true,
+      pts: CUERPO_H(false).concat([['basA', 'Bastón: arriba', .78, .25], ['basB', 'Bastón: suelo', .8, .98]]), huesos: [['hCab', 'hBar'], ['hBar', 'hOmb'], ['basA', 'basB']].concat(HUESOS_H),
+      med: [['Altura total', 'hCab', 'pieI', 6.8, 'v', 'Anciano algo encorvado: un poco menos de 7 cabezas.'], ['Ancho de hombros', 'hHomI', 'hHomD', 1.8, 'd', 'Hombros redondeados bajo el poncho.'], ['Bastón', 'basA', 'basB', 5.0, 'd', 'Bastón largo, de la altura del hombro.']],
+      cultura: 'Para los aimaras, los achachilas son los abuelos-antepasados que habitan en las cumbres (Illimani, Huayna Potosí, Sajama…). Protegen a las comunidades y reciben ofrendas. Se representan como ancianos con poncho, chullo y bastón, o como la propia montaña.',
+      unionTxt: 'Puedes fundir la figura con la montaña: el poncho como laderas, la nieve como canas. La silueta debe leerse a la vez como anciano y como cerro.' },
+  });
   for (const k of ['caballo', 'perro', 'gato', 'toro', 'leon']) ESP[k].grupo = 'animal';
   for (const k of ['centauro', 'sirena', 'minotauro', 'satiro']) ESP[k].grupo = 'clasico';
   Object.assign(ESP.centauro, { unionTxt: 'Revisa que el torso humano nazca donde el caballo tendría el cuello, sobre la punta del hombro, y que la espalda humana continúe la línea de la cruz sin escalón.' });
