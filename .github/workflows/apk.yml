@@ -1,0 +1,90 @@
+# Compila el APK de ESCULTOR (Flutter) en la nube de GitHub y lo publica para descargar.
+# Se ejecuta en cada cambio en «main» y también a mano (pestaña Actions ▸ «APK Android» ▸ Run workflow).
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Copiar la app web dentro de Flutter
+        run: |
+          W=flutter_app/assets/web
+          rm -rf "$W" && mkdir -p "$W"
+          cp index.html *.js manifest.webmanifest icon-*.png "$W"/
+          cp -r mp pdf "$W"/
+          rm -f "$W/sw.js"
+          ls -la "$W" | head -40
+
+      # Misma clave de prueba en cada versión, para poder instalar encima sin perder datos
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: escultor-clave-prueba
+
+      - name: Clave propia (opcional, desde los secretos del repositorio)
+        env:
+          KS: ${{ secrets.ESCULTOR_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/escultor.jks"; echo "ESCULTOR_KEYSTORE=$RUNNER_TEMP/escultor.jks" >> "$GITHUB_ENV"; fi
+
+      - name: Crear proyecto Android
+        working-directory: flutter_app
+        env:
+          ESCULTOR_KEY_PASS: ${{ secrets.ESCULTOR_KEY_PASS }}
+        run: |
+          flutter create --platforms android --org bo.escultor --project-name escultor .
+          rm -f test/widget_test.dart
+          pip install --quiet pillow || true
+          python3 tool/preparar_android.py
+          cat android/app/src/main/AndroidManifest.xml
+
+      - name: Compilar APK
+        working-directory: flutter_app
+        env:
+          ESCULTOR_KEY_PASS: ${{ secrets.ESCULTOR_KEY_PASS }}
+        run: |
+          flutter pub get
+          flutter build apk --release --build-number=${{ github.run_number }}
+          cp build/app/outputs/flutter-apk/app-release.apk ../ESCULTOR.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ESCULTOR-apk
+          path: ESCULTOR.apk
+
+      - name: Publicar para descargar
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk
+          name: ESCULTOR para Android (última versión)
+          body: |
+            Descarga **ESCULTOR.apk** desde el teléfono e instálalo (Android 7 o más nuevo).
+            Si Android avisa «origen desconocido», permite instalar desde el navegador.
+            Versión ${{ github.run_number }} · ${{ github.sha }}
+          files: ESCULTOR.apk
+          make_latest: true

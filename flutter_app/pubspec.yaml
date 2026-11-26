@@ -1,0 +1,29 @@
+name: escultor
+description: "ESCULTOR – Tu guía para esculpir mejor (app Android)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_inappwebview: ^6.1.5
+  flutter_tts: ^4.2.0
+  speech_to_text: ^7.0.0
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+  permission_handler: ^11.3.1
+  url_launcher: ^6.3.1
+  wakelock_plus: ^1.2.8
+
+flutter:
+  uses-material-design: true
+  # La app web completa va dentro (la copia el flujo de GitHub antes de compilar).
+  assets:
+    - assets/web/
+    - assets/web/mp/
+    - assets/web/mp/face/
+    - assets/web/mp/hands/
+    - assets/web/pdf/

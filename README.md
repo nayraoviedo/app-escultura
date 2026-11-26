@@ -4,6 +4,8 @@ App para escultores que, con la cámara del teléfono, **guía proporciones, ana
 
 **Abrir la app:** https://nayraoviedo.github.io/app-escultura/
 
+**App para Android (APK):** https://github.com/nayraoviedo/app-escultura/releases/tag/apk → descarga `ESCULTOR.apk` desde el teléfono e instálalo.
+
 Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo se procesa en tu dispositivo. Se puede **instalar como app** y usar **sin internet**.
 
 ---
@@ -81,7 +83,14 @@ Los **grosores** (brazos, piernas, tronco, patas) tienen valores de referencia p
 - Animales y criaturas se marcan a mano: ningún detector los reconoce en una escultura.
 
 ## Android / APK
-Ver [`docs/ANDROID.md`](docs/ANDROID.md): instalarla como app (ya funciona), generar un APK con **PWABuilder** o, más adelante, una app nativa con sensor de profundidad.
+Hay una **app Flutter** (`flutter_app/`) que lleva dentro toda la app web y funciona **sin internet**. GitHub la compila sola en cada cambio y deja el APK en *Releases* ([descargar](https://github.com/nayraoviedo/app-escultura/releases/tag/apk)). Dentro de la app:
+- cámara y micrófono con los permisos de Android;
+- **voz** con el lector de Android y **manos libres** con el reconocimiento de voz del teléfono;
+- **imprimir / guardar como PDF** la hoja del taller;
+- **copias y ejemplos** se guardan o comparten con el menú de Android (Drive, WhatsApp…);
+- la pantalla no se apaga mientras esculpes.
+
+Más detalles y otras formas de instalar: [`docs/ANDROID.md`](docs/ANDROID.md).
 
 ## Entrenar un detector propio
 Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregidos desde la app (*Más ▸ 🧠 Guardar ejemplo*), expórtalos y entrena gratis en Google Colab con `entrenamiento/entrenar_escultor.ipynb`.
@@ -99,6 +108,9 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `extra.js` | Voz, uso sin conexión, simetría, copias, vista grande, maqueta, torneta, comparar silueta, 3D |
 | `anatomia.js` | Capas de esqueleto y músculos |
 | `animales.js` | Animales, criaturas andinas e híbridos |
+| `nativo.js` | Puente con la app Android (voz, micrófono, archivos, imprimir); en el navegador no hace nada |
+| `flutter_app/` | App Flutter para Android (`lib/main.dart`, `tool/preparar_android.py`) |
+| `.github/workflows/apk.yml` | Compila el APK en GitHub y lo publica |
 | `sw.js`, `manifest.webmanifest` | App instalable y sin conexión |
 | `mp/` | Detectores MediaPipe (pose, rostro, manos) |
 | `pdf/` | pdf.js |

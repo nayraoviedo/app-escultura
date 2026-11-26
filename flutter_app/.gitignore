@@ -1,0 +1,11 @@
+assets/web/
+android/
+build/
+.dart_tool/
+.flutter-plugins*
+.metadata
+pubspec.lock
+test/
+*.iml
+.idea/
+android-firma/
