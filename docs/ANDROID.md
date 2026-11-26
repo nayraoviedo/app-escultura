@@ -26,7 +26,16 @@ Ese APK es un "Trusted Web Activity": abre la misma app web en Chrome, sin barra
 
 **Cómo se hace el APK:** `.github/workflows/apk.yml` copia la app web en `flutter_app/assets/web`, crea el proyecto Android (`flutter create`), lo ajusta con `flutter_app/tool/preparar_android.py` (permisos, nombre, íconos, firma) y compila con `flutter build apk --release`. Se ejecuta sola en cada cambio en `main`, o a mano en *Actions ▸ APK Android ▸ Run workflow*.
 
-**Firma:** cada versión se firma con la misma clave de prueba (guardada en la caché de GitHub), así se instala encima de la anterior. Esa caché se borra si pasan 7 días sin compilar: entonces Android dirá que la app «no se puede actualizar» y habrá que desinstalar (haz antes *Más ▸ Copia de seguridad*). Para una firma fija para siempre, guarda en *Settings ▸ Secrets and variables ▸ Actions* del repositorio dos secretos: `MUSA_KEYSTORE_B64` (tu archivo `.jks` en base64) y `MUSA_KEY_PASS` (su contraseña; alias `escultor`, o pon otro en `MUSA_KEY_ALIAS`). La clave nunca va dentro del repositorio.
+**Firma fija (recomendado):** con una clave propia guardada como secreto de GitHub, todas las versiones se instalan encima de la anterior para siempre.
+1. En GitHub, abre el repositorio ▸ *Settings* ▸ *Secrets and variables* ▸ *Actions* ▸ *New repository secret*.
+2. Crea `ESCULTOR_KEYSTORE_B64` y pega el contenido completo del archivo `ESCULTOR_KEYSTORE_B64.txt`.
+3. Crea `ESCULTOR_KEY_PASS` y pega la contraseña (archivo `ESCULTOR_KEY_PASS.txt`).
+4. En *Actions* ▸ *APK Android* ▸ *Run workflow* compila de nuevo.
+5. **Solo esta vez:** haz *Más ▸ Copia de seguridad*, desinstala la versión anterior, instala la nueva y restaura la copia (la firma cambió). Desde entonces, cada versión se instala encima.
+
+Guarda `musa.jks` y su contraseña en un lugar seguro y privado: sin ellos no se pueden publicar actualizaciones con la misma firma. La clave nunca va dentro del repositorio.
+
+Sin esos secretos, el APK se firma con una clave de prueba guardada en la caché de GitHub, que se pierde si pasan 7 días sin compilar.
 
 **Para compilar en tu computadora** (opcional): instala Flutter, copia la app web en `flutter_app/assets/web` y ejecuta en `flutter_app`: `flutter create --platforms android --org bo.escultor --project-name escultor .`, `python3 tool/preparar_android.py`, `flutter build apk --release`.
 
