@@ -145,10 +145,10 @@
   // ======================= RECORRIDO DE BIENVENIDA =======================
   const PASOS = [
     ['#modos', 'Elige qué revisar', 'Arriba eliges el modo: cuerpo, torso, rostro, manos, piernas, animales o relieve. Cada uno mide cosas distintas.'],
-    ['#tools', 'Abre tu escultura', 'Con «Foto» abres una imagen; en «Más ▸ Cámara» usas la cámara en vivo. Pon el teléfono quieto, vertical y a media altura de la pieza. «Congelar» fija la imagen para revisar con calma.'],
+    ['#dock', 'Abre tu escultura', 'Abajo, sobre la imagen: «Foto» abre una imagen, «Congelar» la fija para revisar con calma, «Referencia» muestra una pieza parecida y «Voz» te lee las correcciones. Pon el teléfono quieto, vertical y a media altura de la pieza.'],
     ['#corr', 'Tus correcciones', 'Aquí aparece qué corregir y cuántos cm. «Ver en cámara» te señala la parte; cuando la arregles, «Marcar como corregido». Toca el título para plegar el panel.'],
-    ['#quick', 'Accesos rápidos', 'Según el modo, aquí tienes lo más útil a un toque: expresión, ropa, anatomía, armazón, cabello, simetría…'],
-    ['#bMas', 'Todo lo demás', 'En «Más» están todas las herramientas, ordenadas por secciones y con buscador: compás, armazón, hoja de medidas, voz manos libres, copias…'],
+    ['#dHerr', 'Herramientas', 'El botón central abre todas las herramientas: medir, espejo, plomada, calcar, maniquí, simetría, solo cámara… y abajo, lo propio de cada modo (expresión, ropa, armazón, cabello). Ciérralo y vuelves a tener toda la cámara.'],
+    ['#fFull', 'Solo cámara', 'Este botón deja solo la imagen y una corrección grande. Sales con «atrás».'],
   ];
   function tour() {
     let t = $('tour');

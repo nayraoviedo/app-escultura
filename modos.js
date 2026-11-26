@@ -286,8 +286,8 @@
       if (limpio) { if (!foco) continue; const cc = E.toScr(a.c || { x: (a.A.x + a.B.x) / 2, y: (a.A.y + a.B.y) / 2 }); if (Math.hypot(cc.x - foco.x, cc.y - foco.y) > 45) continue; }
       const A1 = E.toScr(a.A), B1 = E.toScr(a.B), dr = M.edgeDrag && M.edgeDrag.id === a.id;
       E.line(A1, B1, 2.5, COL[a.st] || '#fff');
-      for (const q of [A1, B1]) E.circle(q, dr ? 9 : 6.5, 'rgba(255,255,255,.25)', '#fff');
-      etiqueta(B1, (a.man ? '✋ ' : '') + a.t, COL[a.st]);
+      if (S.lines || limpio || dr) for (const q of [A1, B1]) E.circle(q, dr ? 9 : 6.5, 'rgba(255,255,255,.25)', '#fff');
+      if (S.lines || limpio) etiqueta(B1, (a.man ? '✋ ' : '') + a.t, COL[a.st]);
     }
   }
   function escalaCm() { const A = S.analysis; if (A && A.u) return (S.altura / A.C.H) / A.u; if (F) return F.cmPx; return null; }
@@ -641,7 +641,7 @@
   const desk = () => window.matchMedia('(min-width: 1000px)').matches;
   function pintarCorr(has) {
     const list = M.corr, pend = list.filter(c => c.st !== 'info' && c.st !== 'ok').length;
-    $('corrTit').textContent = pend ? `Correcciones pendientes (${pend})` : 'Correcciones';
+    $('corrTit').textContent = pend ? `Correcciones (${pend})` : 'Correcciones';
     const sig = S.modo + '|' + list.map(c => c.id + c.texto).join('|') + '|' + M.sel;
     if (sig === M.sigList) { miniaturas(); return; }
     M.sigList = sig;

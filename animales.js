@@ -209,21 +209,44 @@
       const d = tipo === 'v' ? Math.abs(p[b].y - p[a].y) : dist(p[a], p[b]), r = d / u / can, dd = Math.abs(r - 1);
       if (dd > 0.12) out.push({ id: 'an:' + nom, parte: nom, texto: `Mide ${f1(d / u)} cabezas y el canon de ${sp.nombre.toLowerCase()} pide ≈ ${f1(can)}. ${r > 1 ? 'Es demasiado largo' : 'Es demasiado corto'} (${Math.round(dd * 100)}%).`, st: dd > 0.25 ? 'bad' : 'warn', at: mid(p[a], p[b]), tip });
     }
-    // grosores de patas y cuello
+    // grosores de patas y cuello: varían con la complexión, la edad (cría) y el sexo elegidos en ⚙️
     const tg = GROSOR[especie], MM = MO._M;
+    const kc = ({ delgada: 0.9, media: 1, robusta: 1.12 })[S.comp] || 1, cria = S.edad === 'bebe' || S.edad === 'nino';
+    const macho = S.sexo !== 'mujer', melena = /^(leon|toro|caballo|centauro|pegaso|esfinge)$/.test(especie);
+    const kVar = (key) => kc * (cria ? (key === 'cue' ? 0.85 : 0.8) : 1) * (key === 'cue' && melena ? (macho ? 1.12 : 0.9) : 1);
+    if (cria) out.push({ id: 'an:cria', parte: 'Cría', texto: 'Mides una cría: cabeza grande respecto al cuerpo, patas largas y finas con articulaciones gruesas, cuello corto. Los grosores esperados ya están ajustados.', st: 'info', at: p[sp.cab[0]], tip: 'En las crías la cabeza es la parte más desarrollada; el cuerpo es corto y redondeado.' });
+    MM.anchos = [];
     if (tg) {
-      MM.anchos = [];
       for (const [key, nom, a, b, tip] of G_SEG) {
         if (!p[a] || !p[b] || !tg[key]) continue;
         const d = { x: p[b].x - p[a].x, y: p[b].y - p[a].y }, L = Math.hypot(d.x, d.y) || 1, dir = { x: -d.y / L, y: d.x / L }, c = { x: p[a].x + d.x * .45, y: p[a].y + d.y * .45 };
-        const ideal = tg[key] * u, r = MO.medir('ag' + key, c, dir, ideal); if (!r || r.tope) continue;
+        const ideal = tg[key] * kVar(key) * u, r = MO.medir('ag' + key, c, dir, ideal); if (!r || r.tope) continue;
         const q = r.w / ideal, st = Math.abs(q - 1) > 0.4 ? 'bad' : Math.abs(q - 1) > 0.25 ? 'warn' : 'ok';
-        MM.anchos.push({ A: r.A, B: r.B, t: f1(r.w / u) + ' cab.', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano' });
-        if (st !== 'ok') out.push({ id: 'ag:' + key, parte: 'Grosor: ' + nom, texto: `Mide ≈ ${f1(r.w / u)} cabezas de grueso; lo habitual en ${sp.nombre.toLowerCase()} es ≈ ${f1(tg[key])}. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} un ${Math.round(Math.abs(q - 1) * 100)}% (si el borde está mal, arrastra sus extremos).`, st, at: c, tip });
+        MM.anchos.push({ A: r.A, B: r.B, t: f1(r.w / u) + ' cab.', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano', q, zona: key === 'cue' ? 'cuello' : 'patas', kc });
+        if (st !== 'ok') out.push({ id: 'ag:' + key, parte: 'Grosor: ' + nom, texto: `Mide ≈ ${f1(r.w / u)} cabezas de grueso; lo habitual en ${sp.nombre.toLowerCase()}${cria ? ' (cría)' : ''}${key === 'cue' && melena ? (macho ? ' macho' : ' hembra') : ''} de complexión ${S.comp} es ≈ ${f1(tg[key] * kVar(key))}. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} un ${Math.round(Math.abs(q - 1) * 100)}% (si el borde está mal, arrastra sus extremos).`, st, at: c, tip });
       }
     }
     if (sp.union && sp.unionTxt) out.push({ id: 'an:union', parte: 'La unión', texto: sp.unionTxt, st: 'info', at: p.hOmb || p.cad || p[sp.cab[1]], tip: 'Un híbrido convence cuando las dos anatomías comparten los mismos ejes de peso y equilibrio: comprueba la plomada.' });
     return out;
   });
-  window.Animales = { ESP };
+  // Partes humanas de cada híbrido: se miden con el detector de personas y el canon humano.
+  // brazos: factor de largo; tronco/piernas: si existen; comp: complexión esperada; nota: qué cambia.
+  const HUMANO = {
+    sirena: { brazos: 1, tronco: true, nota: 'Brazos y tronco humanos; la cola sustituye a las piernas.' },
+    satiro: { brazos: 1, tronco: true, nota: 'Brazos y tronco humanos; las patas son de cabra.' },
+    minotauro: { brazos: 1, tronco: true, piernas: true, comp: 'robusta', sinCuello: true, nota: 'Cuerpo humano heroico y robusto; la cabeza de toro no cuenta para el cuello.' },
+    centauro: { brazos: 1, nota: 'Solo se miden brazos y hombros humanos; el resto es caballo.' },
+    arpia: { tronco: true, nota: 'Tronco humano; los brazos son alas.' },
+    condor: { tronco: true, piernas: true, nota: 'Cuerpo humano con alas de cóndor.' },
+    ukuku: { brazos: 1.15, tronco: true, piernas: true, comp: 'robusta', nota: 'Hombre-oso: brazos más largos (las manos llegan a las rodillas) y cuerpo macizo.' },
+    chachapuma: { brazos: 1.1, tronco: true, piernas: true, comp: 'robusta', nota: 'Hombre-puma: brazos largos y musculosos, con garras.' },
+    yaguarete: { brazos: 1.1, tronco: true, piernas: true, comp: 'robusta', nota: 'A medio camino a jaguar: brazos largos y hombros felinos.' },
+    diablo: { brazos: 1, tronco: true, piernas: true, nota: 'Cuerpo humano de danzante; la máscara agranda la cabeza.' },
+    ekeko: { brazos: 0.9, tronco: true, piernas: true, comp: 'robusta', nota: 'Figura baja y rechoncha: brazos cortos y vientre abultado.' },
+    tio: { brazos: 1, tronco: true, piernas: true, comp: 'robusta', nota: 'Cuerpo humano sentado y robusto.' },
+    anchanchu: { brazos: 1, tronco: true, piernas: true, comp: 'delgada', nota: 'Figura pequeña y encorvada.' },
+    achachila: { brazos: 1, tronco: true, piernas: true, comp: 'robusta', nota: 'Anciano macizo como la montaña.' },
+    pachamama: { brazos: 1, tronco: true, piernas: true, nota: 'Figura femenina de canon humano.' },
+  };
+  window.Animales = { ESP, especie: () => especie, humano: () => S.modo === 'animal' ? HUMANO[especie] || null : null };
 })();

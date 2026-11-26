@@ -10,6 +10,14 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 
 ---
 
+## Pantalla
+- **La cámara manda:** ocupa casi toda la pantalla. Sobre la imagen: el estado (cámara, figura detectada), la vista (Frente, Lados, Espalda) y el botón de **solo cámara**.
+- **Correcciones** a un lado, plegables: toca el título para abrir o cerrar.
+- **Barra inferior:** Foto · Congelar · **Herramientas** · Referencia · Voz. El botón central abre el panel con todas las herramientas (medir, espejo, plomada, calcar, maniquí, simetría, comparar, ajustar, consejos, solo cámara, anatomía…) y, abajo, **lo propio de cada modo** (especie, expresión, ropa, armazón, cabello). Al cerrarlo recuperas toda la cámara.
+- **Doodles en lugar de emojis:** todos los íconos están dibujados con línea, con trazo de mano alzada.
+- **Ícono:** busto clásico con cinta roja, estilo acuarela (`docs/icono.svg`).
+- Las cifras y los bordes de grosor se ven solo con **Medir** activo, para que la imagen no se llene de números.
+
 ## Cómo empezar
 1. Abre la app en Chrome y permite la cámara.
 2. Responde **«¿Qué vas a esculpir?»** (busto, figura completa, relieve, animal, criatura, estudio de manos o pies): la app muestra solo los modos y herramientas que sirven para ese trabajo. Lo cambias tocando el subtítulo junto al logo. Un **recorrido de 5 pasos** te muestra dónde está cada cosa.
@@ -35,6 +43,9 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 | **Relieve** | Bajo, medio, alto o aplastado (schiacciato): profundidad total sugerida y **mapa de alturas** (cuántos cm sobresale cada parte), en tres planos |
 
 Las vistas **Frente / Lado der. / Lado izq. / Espalda** guardan cada una su imagen. Con frente y lado, la app combina ambas y calcula **medidas 3D reales**.
+
+### Todo varía según la figura
+Los largos completos (brazo, tronco, pierna), los grosores, la prueba del brazo caído y la morfología cambian con lo elegido en ⚙️: **edad** (bebé, niño/a, adolescente, adulto), **sexo** y **complexión** (delgada, media, robusta). En niños y bebés no se busca diferencia hombre/mujer (antes de la adolescencia casi no existe). En **Animales**, los grosores cambian con la complexión, con **cría** (edad bebé o niño) y con macho/hembra en el cuello de toro, león o caballo. En los **híbridos**, la parte humana se mide con el detector de personas y el canon humano, con lo propio de cada criatura: minotauro robusto y sin cuello humano, ukuku y chachapuma con brazos largos, ekeko bajo y de brazos cortos, sirena sin piernas, arpía sin brazos (son alas), centauro solo brazos y hombros…
 
 ### Animales e híbridos
 - **Animales:** caballo, perro, gato, toro, león, llama, puma, cóndor andino.
@@ -112,6 +123,8 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `anatomia.js` | Capas de esqueleto y músculos |
 | `animales.js` | Animales, criaturas andinas e híbridos |
 | `proporciones.js` | Brazo, tronco y pierna completos; grosores en Cuerpo; morfología |
+| `interfaz.js` | Distribución: estado sobre la imagen, barra inferior y panel de Herramientas |
+| `doodle.js` | Íconos dibujados (doodles) en lugar de emojis |
 | `limpio.js` | «Solo cámara»: pantalla limpia con una corrección grande |
 | `nativo.js` | Puente con la app Android (voz, micrófono, archivos, imprimir); en el navegador no hace nada |
 | `flutter_app/` | App Flutter para Android (`lib/main.dart`, `tool/preparar_android.py`) |

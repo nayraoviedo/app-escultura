@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <filter id="acuarela" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="4" result="ruido"/>
+      <feDisplacementMap in="SourceGraphic" in2="ruido" scale="9" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="0.6"/>
+    </filter>
+    <filter id="trazo" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="9" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="r" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <radialGradient id="fondo" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#3a2a66"/><stop offset="1" stop-color="#17122b"/>
+    </radialGradient>
+    <radialGradient id="piel" cx="45%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#fbf4e8"/><stop offset=".7" stop-color="#ecdcc3"/><stop offset="1" stop-color="#d9c3a2"/>
+    </radialGradient>
+    <radialGradient id="rubor" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f08a86" stop-opacity=".45"/><stop offset="1" stop-color="#f08a86" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#fondo)"/>
+  <!-- cintas sueltas detrás -->
+  <g filter="url(#acuarela)" opacity=".92">
+    <path d="M150 300c-40 30-60 70-48 120 20-30 46-48 80-58-22-18-30-38-32-62z" fill="#e8484f" opacity=".75"/>
+    <path d="M360 300c48 20 76 60 72 116-22-26-48-40-84-44 20-22 24-44 12-72z" fill="#e8484f" opacity=".7"/>
+  </g>
+  <!-- cuello y hombros (busto) -->
+  <g filter="url(#acuarela)">
+    <path d="M206 318c4 26 2 48-6 66-40 8-74 26-88 56h288c-14-30-48-48-88-56-8-18-10-40-6-66z" fill="url(#piel)"/>
+  </g>
+  <!-- cabeza -->
+  <g filter="url(#acuarela)">
+    <ellipse cx="256" cy="232" rx="98" ry="118" fill="url(#piel)"/>
+  </g>
+  <!-- rizos -->
+  <g filter="url(#acuarela)" fill="#e2cfae" stroke="#b89c72" stroke-width="3">
+    <circle cx="168" cy="200" r="30"/><circle cx="160" cy="250" r="27"/><circle cx="170" cy="296" r="24"/>
+    <circle cx="344" cy="200" r="30"/><circle cx="352" cy="250" r="27"/><circle cx="342" cy="296" r="24"/>
+    <circle cx="196" cy="150" r="32"/><circle cx="240" cy="128" r="34"/><circle cx="288" cy="130" r="33"/><circle cx="326" cy="156" r="31"/>
+  </g>
+  <g filter="url(#trazo)" fill="none" stroke="#a88a60" stroke-width="3.5" stroke-linecap="round">
+    <path d="M152 196c8-14 26-14 30 2M226 122c10-12 28-10 30 6M276 124c10-12 28-8 28 8M330 196c8-14 26-14 28 2M150 252c8-12 22-10 24 4M338 252c8-12 22-10 24 4"/>
+  </g>
+  <!-- cinta roja en la frente -->
+  <g filter="url(#acuarela)">
+    <path d="M160 176c60-26 132-26 192 0l-6 26c-58-22-122-22-180 0z" fill="#e23b45"/>
+    <path d="M330 168c22-26 52-30 66-14-10 20-34 28-58 26z M332 182c26 2 50 16 54 36-22 4-44-8-58-26z" fill="#e8484f"/>
+    <circle cx="334" cy="178" r="12" fill="#c92a36"/>
+  </g>
+  <!-- rostro: ojos cerrados, nariz, boca -->
+  <g filter="url(#trazo)" fill="none" stroke="#8a6c55" stroke-width="4.5" stroke-linecap="round">
+    <path d="M206 250c10 8 24 8 34 0M272 250c10 8 24 8 34 0"/>
+    <path d="M256 258c-2 18-6 30-10 38 6 4 14 4 20 0"/>
+    <path d="M238 318c12 6 24 6 36 0"/>
+  </g>
+  <ellipse cx="214" cy="290" rx="24" ry="16" fill="url(#rubor)"/>
+  <ellipse cx="300" cy="290" rx="24" ry="16" fill="url(#rubor)"/>
+  <path d="M244 314c8 4 16 4 24 0" stroke="#d9636a" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#trazo)"/>
+  <!-- lazo al cuello -->
+  <g filter="url(#acuarela)">
+    <path d="M200 346c36 14 76 14 112 0l2 20c-38 14-78 14-116 0z" fill="#e23b45"/>
+    <path d="M296 358c30 18 40 44 30 68-14-16-30-26-46-30z" fill="#e8484f" opacity=".85"/>
+  </g>
+</svg>
