@@ -1,8 +1,8 @@
 /* ESCULTOR · funciona sin conexión.
    Archivos de la app: primero la red (para recibir actualizaciones) y, si no hay, la copia guardada.
    Detectores y pdf.js (pesados): primero la copia guardada. */
-const CACHE = 'escultor-v5';
-const BASE = ['./', 'index.html', 'app.js', 'canon.js', 'nativo.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'limpio.js', 'proporciones.js', 'interfaz.js', 'doodle.js', 'letra.js', 'fonts/kalam-latin-400-normal.woff2', 'fonts/kalam-latin-700-normal.woff2', 'fonts/caveat-latin-700-normal.woff2', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
+const CACHE = 'escultor-v6';
+const BASE = ['./', 'index.html', 'app.js', 'canon.js', 'nativo.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'limpio.js', 'proporciones.js', 'manos2.js', 'guia.js', 'interfaz.js', 'doodle.js', 'letra.js', 'fonts/kalam-latin-400-normal.woff2', 'fonts/kalam-latin-700-normal.woff2', 'fonts/caveat-latin-700-normal.woff2', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).catch(() => {})); });
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (e) => {

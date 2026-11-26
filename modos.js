@@ -613,6 +613,7 @@
     }
     for (const f of M.prov) { try { list = list.concat(f(A, has) || []); } catch (e) { console.error(e); } }
     list = list.concat(corrCompas());
+    for (const f of (M.filtros || [])) { try { list = f(list, A, has) || list; } catch (e) { console.error(e); } }
     M.corr = list.filter(c => !M.done.has(S.view + '|' + c.id));
     if (M.sel && !M.corr.find(c => c.id === M.sel)) { M.sel = null; S.focus = null; }
     pintarCorr(has);
@@ -1052,7 +1053,7 @@
   pintarProyectos(); setModo(S.modo); botones();
   const boton = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (ev) => { if (!b.dataset.keep) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); fn(ev, b); }; document.querySelector('#sMas .grid3').appendChild(b); return b; };
   window.Modos = { dibujar, tick, pointerdown, pointermove, pointerup, botones, proyecto: () => M.proyecto, setModo, _M: M,
-    capa: (f) => M.capas.push(f), prov: (f) => M.prov.push(f), ptr: (o) => M.ptr.unshift(o), boton, MODOS, vstate, f1, COL, fem, rostro: () => F, silueta, cuadro, medir, etiqueta, dibujarThumb, superponer, refrescar: () => { M.sigList = ''; lastCorr = 0; },
+    capa: (f) => M.capas.push(f), prov: (f) => M.prov.push(f), filtro: (f) => (M.filtros = M.filtros || []).push(f), ptr: (o) => M.ptr.unshift(o), boton, MODOS, vstate, f1, COL, fem, rostro: () => F, silueta, cuadro, medir, etiqueta, dibujarThumb, superponer, refrescar: () => { M.sigList = ''; lastCorr = 0; },
     corrCuerpo, anchosBrazos, anchosPiernas, anchosTorso, torsoGeo, fem, kComp, enPerfil,
     listaCompas, corr: () => M.corr, seleccion: () => M.sel, seleccionar: (id) => { M.sel = id; const c = M.corr.find(x => x.id === id); S.focus = c && c.seg || null; M.sigList = ''; },
     marcarHecho: (id) => { const b = document.querySelector(`[data-ok="${id}"]`); if (b) b.click(); }, consejoTexto: () => conTexto, guardarProgreso, nav };

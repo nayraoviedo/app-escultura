@@ -104,6 +104,7 @@
   const css2 = document.createElement('style');
   css2.textContent = `
     #quick { display:none !important; }
+    #status { bottom:104px; z-index:6; }
     .brand span { font-family:Georgia, 'Times New Roman', serif; font-style:italic; font-size:14.5px; color:#cfc6ea; }
     /* barra de acciones: flotante, translúcida, con el botón central redondo y elevado */
     #dock { bottom:12px; align-items:center; }
@@ -190,6 +191,8 @@
     especie: '<path d="M5 18c1-4 3-6 7-6s6 2 7 6c-2 1-4 1-7 1s-5 0-7-1z"/><circle cx="6.5" cy="9" r="1.6"/><circle cx="10" cy="6" r="1.6"/><circle cx="14" cy="6" r="1.6"/><circle cx="17.5" cy="9" r="1.6"/>',
     relieve: '<path d="M3.6 18.6h16.8M5.4 18.6c.8-4 2.4-7 4.4-8.4 1.4 2 2.6 2.4 4 0 2.2 1.6 3.6 4.6 4.4 8.4"/>',
     capas: '<path d="M12 3.8l8.4 4.4-8.4 4.4-8.4-4.4z"/><path d="M3.6 12.2l8.4 4.4 8.4-4.4M3.6 16.2l8.4 4.4 8.4-4.4"/>',
+    gesto: '<path d="M8.4 12.4V5.6c0-.9.6-1.5 1.4-1.5s1.4.6 1.4 1.5v5.6M11.2 10.6V4.2c0-.9.6-1.5 1.4-1.5s1.4.6 1.4 1.5v6.6M14 10.8V5.8c0-.9.6-1.5 1.4-1.5s1.4.6 1.4 1.5v8.4c0 4-2.6 6.9-6.2 6.9-2.6 0-4.1-1.5-5.6-4.1L3.8 14c-.4-.8 0-1.6.8-1.8.7-.2 1.3.1 1.7.7l2.1 2.6"/>',
+    angulo: '<path d="M4 19.6h16M4 19.6L15.6 6"/><path d="M10.4 19.6a6.4 6.4 0 0 0-2-4.6"/>',
     guias: '<path d="M2.8 12c2.4-4 5.6-6 9.2-6s6.8 2 9.2 6c-2.4 4-5.6 6-9.2 6s-6.8-2-9.2-6z"/><circle cx="12" cy="12" r="2.8"/>',
   });
   const sinAc = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -215,6 +218,8 @@
     comparar: ['Comparar', I.comparar, () => clic(masBtn(/comparar silueta/)), () => masBtn(/comparar silueta/), 't'],
     profundidad: ['Profundidad', I.capas, () => clic(masBtn(/profundidad del relieve/)), () => masBtn(/profundidad del relieve/), 't'],
     facciones: ['Facciones', I.facciones, 'exprSel', null, 's'],
+    gestos: ['Gestos', I.gesto, 'gestoSel', null, 's'],
+    angulos: ['Ángulos', I.angulo, () => clic($('bAngulos')), () => $('bAngulos'), 't'],
     ropa: ['Ropa', I.ropa, 'ropaSel', null, 's'],
     especie: ['Especie', I.especie, 'animSel', null, 's'],
     tipoRel: ['Tipo de relieve', I.relieve, 'relSel', null, 's'],
@@ -231,12 +236,12 @@
     cuerpo: ['medir', 'maniqui', 'plomada', 'anatomia', 'calcar', 'simetria'],
     torso: ['medir', 'puntos', 'simetria', 'anatomia', 'ropa', 'calcar'],
     rostro: ['medir', 'calcar', 'facciones', 'simetria', 'orejas', 'cabello'],
-    manos: ['medir', 'calcar', 'compas', 'regla', 'anatomia', 'espejo'],
+    manos: ['gestos', 'angulos', 'medir', 'calcar', 'compas', 'anatomia'],
     piernas: ['medir', 'plomada', 'compas', 'anatomia', 'armazon', 'calcar'],
     animal: ['especie', 'medir', 'calcar', 'plomada', 'compas', 'simetria'],
     relieve: ['tipoRel', 'profundidad', 'medir', 'calcar', 'plomada', 'anatomia'],
   };
-  const TODAS = ['medir', 'maniqui', 'plomada', 'espejo', 'calcar', 'simetria', 'anatomia', 'armazon', 'cabello', 'ropa', 'compas', 'regla', 'comparar', 'limpio', 'camara', 'girar', 'ajustar', 'consejos', 'ayuda', 'mas'];
+  const TODAS = ['medir', 'maniqui', 'plomada', 'espejo', 'calcar', 'simetria', 'anatomia', 'armazon', 'cabello', 'ropa', 'compas', 'regla', 'comparar', 'angulos', 'limpio', 'camara', 'girar', 'ajustar', 'consejos', 'ayuda', 'mas'];
   const herr = document.createElement('div'); herr.id = 'herr';
   herr.innerHTML = `<h3>${ic(I.consejo)}<span>Herramientas <small id="hModo"></small></span><button id="hCerrar" aria-label="Cerrar">${ic(I.cerrar)}</button></h3>
     <div class="hgrid" id="hPrin"></div>

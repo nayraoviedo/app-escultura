@@ -21,13 +21,16 @@ Al abrir MUSA ves sobre todo **la cámara**, la zona elegida arriba (Cuerpo, Tor
   - Cuerpo: Medir, Maniquí, Plomada, Anatomía, Calcar, Simetría
   - Torso: Medir, Puntos, Simetría, Anatomía, Ropa, Calcar
   - Rostro: Medir, Calcar, Facciones, Simetría, Orejas, Cabello
-  - Mano y brazo: Medir, Calcar, Compás, Regla, Anatomía, Espejo
+  - Mano y brazo: Gestos, Ángulos, Medir, Calcar, Compás, Anatomía
   - Piernas: Medir, Plomada, Compás, Anatomía, Armazón, Calcar
   - Animales: Especie, Medir, Calcar, Plomada, Compás, Simetría
   - Relieve: Tipo de relieve, Profundidad, Medir, Calcar, Plomada, Anatomía
 - Las **opciones** (tipo de ropa, expresión, especie, tipo de relieve) aparecen solo al tocar esa herramienta.
 - El botón central abre y cierra el panel sin cambiar de pantalla; cerrado, la cámara queda casi a pantalla completa. El botón ⛶ deja **solo la cámara**.
 - **Correcciones (n):** una ficha pequeña a la derecha; al tocarla se desliza una **bandeja** con el detalle. Se cierra tocando fuera o el título.
+- **Guía paso a paso** (fila destacada en Herramientas): en vez de todas las correcciones juntas, MUSA las da por etapas, como se trabaja una pieza: **1. Altura y eje** (plomada, inclinaciones) · **2. Masas grandes** (cabeza, tronco, hombros, caderas, complexión) · **3. Proporciones** (largos, simetría, tercios) · **4. Detalles** (grosores finos, dedos, gestos, ángulos, ropa, cabello). Recuerda la etapa de cada proyecto y avisa con voz cuando una etapa está lista.
+- **Gestos** (Mano y brazo): elige el gesto que buscas — mano abierta, relajada, puño, señalar, sostener, pinza o dos dedos — y MUSA dice cómo se lee tu mano y qué dedo abrir o doblar.
+- **Ángulos** (Mano y brazo): inclinación y arco de los **nudillos**, ángulo de la **muñeca** frente al antebrazo (con sus límites naturales) y **ángulo de carga del codo** (distinto en hombre, mujer y niños), dibujados sobre la imagen.
 - **Doodles en lugar de emojis** y cifras de medida solo con **Medir** activo.
 - **Letra manuscrita:** el nombre en *Caveat* y los títulos y botones en *Kalam* (van dentro de la app, licencia SIL OFL, carpeta `fonts/`). Las correcciones siguen en letra clara para leerlas bien. En ⚙️ ▸ *Letra*: manuscrita en títulos y botones, manuscrita en todo, o clara.
 - **Ícono:** busto clásico con cinta roja, guías de proporción y desbastador, en acuarela (`docs/icono-musa.png`).
@@ -138,6 +141,8 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `animales.js` | Animales, criaturas andinas e híbridos |
 | `proporciones.js` | Brazo, tronco y pierna completos; grosores en Cuerpo; morfología |
 | `interfaz.js` | Distribución: estado sobre la imagen, barra inferior y panel de Herramientas |
+| `manos2.js` | Gestos y ángulos de mano y brazo |
+| `guia.js` | Guía paso a paso por etapas |
 | `letra.js`, `fonts/` | Letra manuscrita (Caveat y Kalam) y su ajuste |
 | `doodle.js` | Íconos dibujados (doodles) en lugar de emojis |
 | `limpio.js` | «Solo cámara»: pantalla limpia con una corrección grande |

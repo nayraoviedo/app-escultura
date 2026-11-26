@@ -96,7 +96,7 @@
   // ---------- UI básica ----------
   const status = $('status');
   let flashMsg = null;
-  function flash(list, ms) { flashMsg = { list, until: performance.now() + (ms || 6000) }; }
+  function flash(list, ms, ms2) { if (typeof list === 'string') { list = [[list, typeof ms === 'string' ? ms : '']]; ms = ms2; } flashMsg = { list, until: performance.now() + (ms || 6000) }; }
   function pills(list) {
     status.innerHTML = '';
     for (const [txt, cls] of list) { const d = document.createElement('div'); d.className = 'pill ' + (cls || ''); d.textContent = txt; status.appendChild(d); }
