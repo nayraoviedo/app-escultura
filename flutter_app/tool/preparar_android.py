@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Ajusta el proyecto Android que genera «flutter create» para ESCULTOR.
+"""Ajusta el proyecto Android que genera «flutter create» para MUSA.
 Lo usa el flujo de GitHub (.github/workflows/apk.yml) antes de compilar.
 - permisos de cámara, micrófono e internet
 - tráfico local sin cifrar (la app se sirve desde localhost dentro del teléfono)
 - consultas para el lector de voz, el reconocimiento de voz y los enlaces
-- nombre «ESCULTOR», minSdk 24, íconos y firma (clave propia si hay secretos en GitHub)
+- nombre «MUSA», minSdk 24, íconos y firma (clave propia si hay secretos en GitHub)
 """
 import os, re, shutil, sys
 
@@ -20,7 +20,7 @@ permisos = ['android.permission.INTERNET', 'android.permission.CAMERA', 'android
 extra = ''.join(f'    <uses-permission android:name="{p}"/>\n' for p in permisos if p not in s)
 extra += '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
 s = re.sub(r'(<manifest[^>]*>\s*\n)', lambda m: m.group(1) + extra, s, count=1)
-s = re.sub(r'android:label="[^"]*"', 'android:label="ESCULTOR"', s, count=1)
+s = re.sub(r'android:label="[^"]*"', 'android:label="MUSA"', s, count=1)
 if 'usesCleartextTraffic' not in s:
     s = s.replace('<application', '<application\n        android:usesCleartextTraffic="true"\n        android:hardwareAccelerated="true"', 1)
 consultas = '''        <intent>
@@ -104,4 +104,4 @@ except Exception as e:  # sin Pillow: copia el mismo ícono en todas las densida
         os.makedirs(carpeta, exist_ok=True)
         shutil.copy(icono, os.path.join(carpeta, 'ic_launcher.png'))
 
-print('Proyecto Android listo para ESCULTOR')
+print('Proyecto Android listo para MUSA')

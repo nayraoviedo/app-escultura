@@ -84,7 +84,7 @@
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
   let instalar = null;
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); instalar = e; btnInst.style.display = ''; });
-  const btnInst = MO.boton('📲 Instalar ESCULTOR como app', async () => { if (instalar) { instalar.prompt(); await instalar.userChoice; instalar = null; } else flash('En Chrome: menú ⋮ ▸ «Instalar app» o «Añadir a pantalla de inicio».', '', 7000); });
+  const btnInst = MO.boton('📲 Instalar MUSA como app', async () => { if (instalar) { instalar.prompt(); await instalar.userChoice; instalar = null; } else flash('En Chrome: menú ⋮ ▸ «Instalar app» o «Añadir a pantalla de inicio».', '', 7000); });
   const ARCHIVOS_OFF = ['index.html', 'app.js', 'canon.js', 'nativo.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'limpio.js', 'proporciones.js', 'interfaz.js', 'doodle.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
     'mp/pose.js', 'mp/pose_web.binarypb', 'mp/pose_solution_packed_assets.data', 'mp/pose_solution_packed_assets_loader.js', 'mp/pose_solution_simd_wasm_bin.js', 'mp/pose_solution_simd_wasm_bin.wasm', 'mp/pose_solution_simd_wasm_bin.data', 'mp/pose_solution_wasm_bin.js', 'mp/pose_solution_wasm_bin.wasm', 'mp/pose_landmark_full.tflite',
     'mp/face/face_mesh.js', 'mp/face/face_mesh.binarypb', 'mp/face/face_mesh_solution_packed_assets.data', 'mp/face/face_mesh_solution_packed_assets_loader.js', 'mp/face/face_mesh_solution_simd_wasm_bin.js', 'mp/face/face_mesh_solution_simd_wasm_bin.wasm', 'mp/face/face_mesh_solution_simd_wasm_bin.data', 'mp/face/face_mesh_solution_wasm_bin.js', 'mp/face/face_mesh_solution_wasm_bin.wasm',
@@ -94,7 +94,7 @@
     if (!('caches' in window)) { flash('Este navegador no permite guardar la app para usarla sin conexión.', 'warn'); return; }
     const c = await caches.open('escultor-v4'); let n = 0;
     for (const f of ARCHIVOS_OFF) { try { const r = await fetch(f, { cache: 'no-cache' }); if (r.ok) { await c.put(f, r.clone()); } } catch (e) {} n++; if (n % 5 === 0) flash(`📥 Guardando para uso sin conexión… ${n}/${ARCHIVOS_OFF.length}`, '', 2000); }
-    flash('✅ Listo: ESCULTOR y sus detectores funcionan sin internet (la búsqueda en la Biblioteca sí necesita conexión).', 'ok', 8000);
+    flash('✅ Listo: MUSA y sus detectores funcionan sin internet (la búsqueda en la Biblioteca sí necesita conexión).', 'ok', 8000);
   });
 
   if (window.__ESCULTOR_APP) { btnInst.remove(); btnOff.remove(); }
@@ -158,13 +158,13 @@
     for (const [n, st] of DBS) { try { const db = await abrirDB(n, st); out.bases[n] = await aJSON(await todo(db, st)); db.close(); } catch (e) { out.bases[n] = []; } }
     const blob = new Blob([JSON.stringify(out)], { type: 'application/json' }), nombre = `escultor-copia-${new Date().toISOString().slice(0, 10)}.json`;
     const file = new File([blob], nombre, { type: 'application/json' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Copia de ESCULTOR' }); flash('✅ Copia compartida. Guárdala en Google Drive o donde prefieras.', 'ok', 6000); return; } catch (e) { /* cancelado: descarga normal */ } }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Copia de MUSA' }); flash('✅ Copia compartida. Guárdala en Google Drive o donde prefieras.', 'ok', 6000); return; } catch (e) { /* cancelado: descarga normal */ } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
     flash(`✅ Copia descargada (${(blob.size / 1048576).toFixed(1)} MB). Súbela a Google Drive para tenerla a salvo.`, 'ok', 8000);
   }
   async function importarTodo(file) {
     try {
-      const d = JSON.parse(await file.text()); if (d.app !== 'ESCULTOR' || d.tipo !== 'copia-completa') { flash('Ese archivo no es una copia de ESCULTOR.', 'bad'); return; }
+      const d = JSON.parse(await file.text()); if (d.app !== 'ESCULTOR' || d.tipo !== 'copia-completa') { flash('Ese archivo no es una copia de MUSA.', 'bad'); return; }
       for (const k in d.local) localStorage.setItem(k, d.local[k]);
       for (const [n, st] of DBS) { const items = await deJSON(d.bases[n] || []); const db = await abrirDB(n, st); await new Promise((res, rej) => { const t = db.transaction(st, 'readwrite'); const s2 = t.objectStore(st); for (const it of items) s2.put(it); t.oncomplete = res; t.onerror = () => rej(t.error); }); db.close(); }
       flash('✅ Copia restaurada. Recargando…', 'ok', 3000); setTimeout(() => location.reload(), 1500);

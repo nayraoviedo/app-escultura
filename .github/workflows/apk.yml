@@ -1,4 +1,4 @@
-# Compila el APK de ESCULTOR (Flutter) en la nube de GitHub y lo publica para descargar.
+# Compila el APK de MUSA (Flutter) en la nube de GitHub y lo publica para descargar.
 # Se ejecuta en cada cambio en «main» y también a mano (pestaña Actions ▸ «APK Android» ▸ Run workflow).
 name: APK Android
 
@@ -72,21 +72,26 @@ jobs:
           # Algunos plugins aún usan una regla de Proguard que el Gradle nuevo ya no acepta
           find "$PUB_CACHE/hosted" -path '*/android/build.gradle*' -print0 | xargs -0 sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g"
           flutter build apk --release --build-number=${{ github.run_number }}
-          cp build/app/outputs/flutter-apk/app-release.apk ../ESCULTOR.apk
+          cp build/app/outputs/flutter-apk/app-release.apk ../MUSA.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ESCULTOR-apk
-          path: ESCULTOR.apk
+          name: MUSA-apk
+          path: MUSA.apk
+
+      - name: Quitar el APK con el nombre anterior
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete-asset apk ESCULTOR.apk -y -R ${{ github.repository }} || true
 
       - name: Publicar para descargar
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk
-          name: ESCULTOR para Android (última versión)
+          name: MUSA para Android (última versión)
           body: |
-            Descarga **ESCULTOR.apk** desde el teléfono e instálalo (Android 7 o más nuevo).
+            Descarga **MUSA.apk** desde el teléfono e instálalo (Android 7 o más nuevo).
             Si Android avisa «origen desconocido», permite instalar desde el navegador.
             Versión ${{ github.run_number }} · ${{ github.sha }}
-          files: ESCULTOR.apk
+          files: MUSA.apk
           make_latest: true

@@ -1,10 +1,14 @@
-# 🗿 ESCULTOR · Tu guía para esculpir mejor
+# MUSA · Tu guía para esculpir mejor
+
+<img src="docs/icono-musa.png" width="120" alt="Ícono de MUSA">
+
+*(Antes se llamaba ESCULTOR.)*
 
 App para escultores que, con la cámara del teléfono, **guía proporciones, anatomía y vistas** mientras modelas. Compara tu pieza con el canon clásico (o con tu propia referencia) y te dice **qué corregir y cuántos centímetros**.
 
 **Abrir la app:** https://nayraoviedo.github.io/app-escultura/
 
-**App para Android (APK):** https://github.com/nayraoviedo/app-escultura/releases/tag/apk → descarga `ESCULTOR.apk` desde el teléfono e instálalo.
+**App para Android (APK):** https://github.com/nayraoviedo/app-escultura/releases/tag/apk → descarga `MUSA.apk` desde el teléfono e instálalo.
 
 Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo se procesa en tu dispositivo. Se puede **instalar como app** y usar **sin internet**.
 
@@ -15,7 +19,7 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 - **Correcciones** a un lado, plegables: toca el título para abrir o cerrar.
 - **Barra inferior:** Foto · Congelar · **Herramientas** · Referencia · Voz. El botón central abre el panel con todas las herramientas (medir, espejo, plomada, calcar, maniquí, simetría, comparar, ajustar, consejos, solo cámara, anatomía…) y, abajo, **lo propio de cada modo** (especie, expresión, ropa, armazón, cabello). Al cerrarlo recuperas toda la cámara.
 - **Doodles en lugar de emojis:** todos los íconos están dibujados con línea, con trazo de mano alzada.
-- **Ícono:** busto clásico con cinta roja, estilo acuarela (`docs/icono.svg`).
+- **Ícono:** busto clásico con cinta roja, guías de proporción y desbastador, en acuarela (`docs/icono-musa.png`).
 - Las cifras y los bordes de grosor se ven solo con **Medir** activo, para que la imagen no se llene de números.
 
 ## Cómo empezar
@@ -27,7 +31,7 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 6. **🎯 Solo cámara** (primer botón de abajo, o el botón ⛶ sobre la imagen): pantalla limpia con la cámara a pantalla completa y **una corrección grande** abajo (◀ ▶, 🔊 Leer, ✓ Hecho; ▾ la oculta). Arriba: Salir, Congelar, Voz y 📸 Guardar. Se sale con «atrás». En *Más* puedes hacer que la cámara se abra siempre así.
 7. Sigue el panel **Correcciones pendientes**: *Ver en cámara* te señala la parte; cuando la arregles, *Marcar como corregido*.
 
-**Instalarla y usarla sin internet:** *Más ▸ 📲 Instalar ESCULTOR como app* y luego *Más ▸ 📥 Descargar todo para usar sin internet*.
+**Instalarla y usarla sin internet:** *Más ▸ 📲 Instalar MUSA como app* y luego *Más ▸ 📥 Descargar todo para usar sin internet*.
 
 ---
 

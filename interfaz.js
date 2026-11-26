@@ -158,7 +158,7 @@
     ['hAyuda', 'Ayuda', I.ayuda, () => clic($('bHelp'))],
   ];
   const herr = document.createElement('div'); herr.id = 'herr';
-  herr.innerHTML = `<h3>${ic(I.consejo)}Herramientas de Escultor<button id="hCerrar" aria-label="Cerrar">${ic(I.cerrar)}</button></h3>
+  herr.innerHTML = `<h3>${ic(I.consejo)}Herramientas de MUSA<button id="hCerrar" aria-label="Cerrar">${ic(I.cerrar)}</button></h3>
     <div class="hgrid">${H.map(([id, t, d]) => `<button id="${id}">${ic(d)}<span>${t}</span></button>`).join('')}</div>
     <h4>PARA ESTE MODO</h4><div id="hQuick"></div>`;
   stage.appendChild(herr);
@@ -177,7 +177,7 @@
 
   // ---- Consejos en una hoja ----
   const sc = document.createElement('div'); sc.className = 'sheet'; sc.id = 'sCons';
-  sc.innerHTML = '<h2>Consejo de ESCULTOR <button data-close>✕</button></h2>';
+  sc.innerHTML = '<h2>Consejo de MUSA <button data-close>✕</button></h2>';
   document.body.appendChild(sc);
   sc.appendChild($('consejo'));
   sc.querySelector('[data-close]').onclick = () => sc.classList.remove('open');

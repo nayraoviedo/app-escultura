@@ -898,7 +898,7 @@
     const nombre = `escultor_${String(M.proyecto).replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').trim().replace(/\s+/g, '-') || 'proyecto'}_${f}.jpg`;
     const file = new File([s.img], nombre, { type: 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'ESCULTOR · ' + M.proyecto }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.share({ files: [file], title: 'MUSA · ' + M.proyecto }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
     E.flash([['💾 Elige «Drive» para guardarla en Google Drive, o «Fotos» para tu galería.', 'ok']], 5000);

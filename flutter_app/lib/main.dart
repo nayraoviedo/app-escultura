@@ -1,4 +1,4 @@
-// ESCULTOR para Android.
+// MUSA para Android (antes ESCULTOR).
 // Lleva dentro la app web completa (assets/web) y la sirve desde el propio teléfono,
 // así funciona sin internet. Agrega lo que el navegador interno no trae:
 // permisos de cámara y micrófono, voz de Android, reconocimiento de voz,
@@ -76,7 +76,7 @@ class EscultorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ESCULTOR',
+      title: 'MUSA',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: const Color(0xFF6C3FD1), useMaterial3: true),
       home: const Pantalla(),

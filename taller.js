@@ -147,12 +147,12 @@
     for (const [m, nom] of secciones) { S.modo = m; const l = MO.listaCompas(); S.modo = prev; if (!l.length) continue; tablas += `<div class="nob"><h2>${nom}</h2><table>${l.map(it => `<tr><td><b>${esc(it.lab)}</b> — ${esc(it.como)}</td><td class="num">${f1(it.cm)} cm</td></tr>`).join('')}</table></div>`; }
     const { t, total, calibre } = tramos();
     const fig = `${S.edad === 'bebe' ? 'Bebé' : S.edad === 'nino' ? 'Niño/a' : S.edad === 'teen' ? 'Adolescente' : 'Adulto'}${S.edad.startsWith('adulto') || S.edad === 'teen' ? (S.sexo === 'mujer' ? ', mujer' : ', hombre') : ''}, complexión ${S.comp}`;
-    h.innerHTML = `<h1>ESCULTOR · Hoja de medidas</h1>
+    h.innerHTML = `<h1>MUSA · Hoja de medidas</h1>
       <div>Proyecto: <b>${esc(MO.proyecto())}</b> · ${new Date().toLocaleDateString('es')}</div>
       <div>${fig} · canon de <b>${f1(C.H)} cabezas</b>${C.esRef ? ' (de tu referencia)' : ''} · altura final <b>${f1(S.alturaFinal)} cm</b>${S.contr ? ` · material: ${esc(S.material)} (${f1(S.contr * 100)}% de contracción) → <b>modelar a ${f1(S.altura)} cm</b>` : ''} · <b>1 cabeza = ${f1(S.altura / C.H)} cm</b></div>
       <div class="col2">${tablas}</div>
       <div class="nob"><h2>Armazón</h2><div style="display:flex;gap:14pt;align-items:flex-start"><div style="width:42%">${svgArmazon(true)}</div><table>${t.map(r => `<tr><td>${esc(r[1])}</td><td class="num">${f1(r[2])} cm</td></tr>`).join('')}<tr><td><b>Alambre total aprox.</b></td><td class="num">${f1(total * 2.3 / 100)} m</td></tr><tr><td colspan="2">${esc(calibre)}</td></tr></table></div></div>
-      <div class="pie">Medidas del canon (orientativas). Las medidas ya incluyen la contracción del material si la indicaste. Hecho con ESCULTOR · nayraoviedo.github.io/app-escultura</div>`;
+      <div class="pie">Medidas del canon (orientativas). Las medidas ya incluyen la contracción del material si la indicaste. Hecho con MUSA · nayraoviedo.github.io/app-escultura</div>`;
     try { window.print(); } catch (e) { E.flash([['Tu navegador no permite imprimir desde aquí. Abre la app en Chrome.', 'warn']], 6000); }
   }
   MO.boton('🖨️ Hoja de medidas (imprimir / PDF)', imprimir);

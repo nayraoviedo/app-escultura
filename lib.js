@@ -555,7 +555,7 @@
           <button class="big sec" id="dCmp">⚖️ Añadir a comparar</button>`}
         <button class="big sec" id="dSave">${saved ? '🗂️ Cambiar colecciones' : '⭐ Guardar en mis referencias'}</button>
         ${saved ? '<button class="big sec danger" id="dDel">🗑️ Eliminar</button>' : ''}
-        <p class="note small">Respeta la licencia y cita al autor si publicas tu obra basada en esta referencia. Escultor no es dueño de estas imágenes.</p>
+        <p class="note small">Respeta la licencia y cita al autor si publicas tu obra basada en esta referencia. MUSA no es dueña de estas imágenes.</p>
       </div>`;
     $('libDet').classList.add('open');
     if (d.kind === '3d') abrir3D(d);
