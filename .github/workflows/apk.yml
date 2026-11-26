@@ -36,7 +36,7 @@ jobs:
           W=flutter_app/assets/web
           rm -rf "$W" && mkdir -p "$W"
           cp index.html *.js manifest.webmanifest icon-*.png "$W"/
-          cp -r mp pdf "$W"/
+          cp -r mp pdf fonts "$W"/
           rm -f "$W/sw.js"
           ls -la "$W" | head -40
 

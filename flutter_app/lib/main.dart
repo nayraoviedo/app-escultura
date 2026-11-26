@@ -50,6 +50,9 @@ const Map<String, String> kTipos = {
   'ico': 'image/x-icon',
   'pdf': 'application/pdf',
   'md': 'text/plain; charset=utf-8',
+  'woff2': 'font/woff2',
+  'woff': 'font/woff',
+  'txt': 'text/plain; charset=utf-8',
 };
 
 Future<void> iniciarServidor() async {

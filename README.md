@@ -29,6 +29,7 @@ Al abrir MUSA ves sobre todo **la cámara**, la zona elegida arriba (Cuerpo, Tor
 - El botón central abre y cierra el panel sin cambiar de pantalla; cerrado, la cámara queda casi a pantalla completa. El botón ⛶ deja **solo la cámara**.
 - **Correcciones (n):** una ficha pequeña a la derecha; al tocarla se desliza una **bandeja** con el detalle. Se cierra tocando fuera o el título.
 - **Doodles en lugar de emojis** y cifras de medida solo con **Medir** activo.
+- **Letra manuscrita:** el nombre en *Caveat* y los títulos y botones en *Kalam* (van dentro de la app, licencia SIL OFL, carpeta `fonts/`). Las correcciones siguen en letra clara para leerlas bien. En ⚙️ ▸ *Letra*: manuscrita en títulos y botones, manuscrita en todo, o clara.
 - **Ícono:** busto clásico con cinta roja, guías de proporción y desbastador, en acuarela (`docs/icono-musa.png`).
 
 ## Cómo empezar
@@ -137,6 +138,7 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `animales.js` | Animales, criaturas andinas e híbridos |
 | `proporciones.js` | Brazo, tronco y pierna completos; grosores en Cuerpo; morfología |
 | `interfaz.js` | Distribución: estado sobre la imagen, barra inferior y panel de Herramientas |
+| `letra.js`, `fonts/` | Letra manuscrita (Caveat y Kalam) y su ajuste |
 | `doodle.js` | Íconos dibujados (doodles) en lugar de emojis |
 | `limpio.js` | «Solo cámara»: pantalla limpia con una corrección grande |
 | `nativo.js` | Puente con la app Android (voz, micrófono, archivos, imprimir); en el navegador no hace nada |
