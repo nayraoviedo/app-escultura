@@ -26,11 +26,11 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 ## Modos
 | Modo | Qué revisa |
 |---|---|
-| **Cuerpo** | Maniquí con el canon en la misma pose de tu pieza (con escorzo). Largo de cada parte en cm, hombros y caderas, contrapposto y **grosor de brazos** (bíceps, codo, antebrazo, muñeca) |
-| **Torso** | Clavículas, pezones, pecho, cintura, ombligo y caderas, distintos en hombre y mujer. De perfil, alturas; de frente, simetría de los pechos. Ajusta las guías al giro y la inclinación del tronco. Puede poner sola una **referencia parecida** encima, alineada |
+| **Cuerpo** | Maniquí con el canon en la misma pose de tu pieza (con escorzo). Largo de cada parte en cm, hombros y caderas, contrapposto, **largo completo** de brazos, tronco y piernas, **grosores de brazos, tronco y piernas** y **morfología**: si los grosores corresponden a la complexión elegida (delgada, media, robusta), qué zona está desequilibrada y si la relación hombros/caderas se lee como hombre o mujer |
+| **Torso** | Clavículas, pezones, pecho, cintura, ombligo y caderas, distintos en hombre y mujer. De perfil, alturas; de frente, simetría de los pechos. Ajusta las guías al giro y la inclinación del tronco. Puede poner sola una **referencia parecida** encima, alineada. **Tronco completo** (de la barbilla a las caderas) y lectura hombre/mujer |
 | **Rostro** | Eje central, tercios, **distancia entre ojos**, simetría y tamaño de los ojos, nariz, boca, inclinación de la cabeza y **orejas** (entre cejas y base de la nariz) |
-| **Manos** | Largo de cada dedo frente al medio, dedo medio frente a palma, **ancho de la palma** y flexión de cada dedo |
-| **Piernas y pies** | Largos, simetría, eje cadera–rodilla–tobillo, **grosor** de muslo, rodilla, pantorrilla y tobillo, y largo del pie |
+| **Mano y brazo** | Mano: largo de cada dedo frente al medio, dedo medio frente a palma, **ancho de la palma** y flexión. Brazo: **largo completo del hombro a la punta de los dedos** (y cuánto mide cada tramo), dónde debería terminar la muñeca, prueba del brazo caído (la muñeca llega a la entrepierna) y **grosor** de bíceps, codo, antebrazo y muñeca. Para el brazo, que se vean hombro y cadera |
+| **Piernas y pies** | **Pierna completa** (cadera → tobillo), largos, simetría, eje cadera–rodilla–tobillo, **grosor** de muslo, rodilla, pantorrilla y tobillo, y largo del pie |
 | **Animales e híbridos** | Plantillas de puntos y canon por especie (ver abajo) |
 | **Relieve** | Bajo, medio, alto o aplastado (schiacciato): profundidad total sugerida y **mapa de alturas** (cuántos cm sobresale cada parte), en tres planos |
 
@@ -111,6 +111,7 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `extra.js` | Voz, uso sin conexión, simetría, copias, vista grande, maqueta, torneta, comparar silueta, 3D |
 | `anatomia.js` | Capas de esqueleto y músculos |
 | `animales.js` | Animales, criaturas andinas e híbridos |
+| `proporciones.js` | Brazo, tronco y pierna completos; grosores en Cuerpo; morfología |
 | `limpio.js` | «Solo cámara»: pantalla limpia con una corrección grande |
 | `nativo.js` | Puente con la app Android (voz, micrófono, archivos, imprimir); en el navegador no hace nada |
 | `flutter_app/` | App Flutter para Android (`lib/main.dart`, `tool/preparar_android.py`) |

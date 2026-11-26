@@ -24,7 +24,7 @@
   if (S.modo === 'biblio') S.modo = 'cuerpo';
 
   // ======================= Modos =======================
-  const MODOS = { cuerpo: 'Cuerpo', torso: 'Torso', rostro: 'Rostro', manos: 'Manos', piernas: 'Piernas y pies', animal: 'Animales e híbridos' };
+  const MODOS = { cuerpo: 'Cuerpo', torso: 'Torso', rostro: 'Rostro', manos: 'Mano y brazo', piernas: 'Piernas y pies', animal: 'Animales e híbridos' };
   function setModo(m) {
     if (m === 'biblio') { B() && B().abrir('buscar'); return; }
     S.modo = m; ls.set('escultorModo', m);
@@ -220,7 +220,7 @@
       const toca = brazos.some(b => Math.abs(dot(sub(b, c), T.down)) < 0.6 * T.u && Math.abs(dot(sub(b, c), T.perp)) < r.w / 2 + 0.15 * T.u);
       if (toca) { pegados = true; continue; }
       const q = r.w / ideal, st = Math.abs(q - 1) > 0.3 ? 'bad' : Math.abs(q - 1) > 0.15 ? 'warn' : 'ok';
-      M.anchos.push({ A: r.A, B: r.B, t: f1(r.w * cm) + ' cm', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano' });
+      M.anchos.push({ A: r.A, B: r.B, t: f1(r.w * cm) + ' cm', st, id: r.id, c: r.c, dir: r.dir, a: r.a, b: r.b, man: r.fuente === 'ajustado a mano', q, zona: 'torso' });
       if (st !== 'ok') out.push({ id: 's:t' + nom, parte: `${nom} (silueta)`, texto: `Mide ≈ ${f1(r.w * cm)} cm de ancho; el canon de ${F ? 'mujer' : 'hombre'} (${S.comp}) pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Reduce' : 'Aumenta'} el volumen ${f1(Math.abs(r.w - ideal) * cm)} cm en total.`, st, at: c, tip: F ? 'En la mujer, la cintura es lo más estrecho del tronco y las caderas igualan o superan el ancho de los hombros.' : 'En el hombre, el tronco es un trapecio: hombros y pecho anchos, cintura poco marcada y caderas estrechas.' });
     }
     if (pegados) out.push({ id: 's:tbrazos', parte: 'Anchos del tronco', texto: 'Los brazos tocan el tronco y la silueta se mezcla: no mido esos anchos. Usa los puntos de cintura o mira cuando los brazos estén separados.', st: 'info', at: A.M.midHip, tip: 'Para medir anchos a mano, usa el compás de punta a punta del contorno, a la altura de cada línea guía.' });
@@ -361,7 +361,7 @@
         if (Math.abs(r - 1) > 0.2) out.push({ id: 'p:pie' + lado, parte: `Pie ${lado}.`, texto: `Mide ≈ ${f1(r * C.foot * cmCab)} cm y el canon pide ${f1(C.foot * cmCab)} cm. ${r > 1 ? 'Acórtalo' : 'Alárgalo'} desde la punta (medida aproximada: confírmala con compás).`, st: Math.abs(r - 1) > 0.35 ? 'bad' : 'warn', at: pt(to), tip: TIPS_P.foot });
       }
     }
-    out.push(...anchosPiernas(A));
+    M.anchos = []; out.push(...anchosPiernas(A));
     if (!out.length) out.push({ id: 'p:info', parte: 'Piernas y pies', texto: 'Piernas y pies dentro del canon desde esta vista. Revisa también de perfil: el pie se mide mejor de lado.', st: 'info', at: A.M.anL || A.M.midHip, tip: TIPS_P.ankle + ' ' + TIPS_P.foot });
     return out;
   }
@@ -386,7 +386,7 @@
     for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
       const md = medidas[key + lado]; if (!md) continue;
       const fino = key === 'mun', ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > (fino ? 0.4 : 0.3) * tk ? 'bad' : Math.abs(q - 1) > (fino ? 0.25 : 0.18) * tk ? 'warn' : 'ok';
-      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano' });
+      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano', q, zona: 'brazo' });
       if (st !== 'ok') out.push({ id: 'sb:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${quienCanon()} pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
     }
     for (const key of Object.keys(W)) { const a = medidas[key + 'izq'], b = medidas[key + 'der']; if (!a || !b) continue; const dd = Math.abs(a.r.w - b.r.w) / Math.max(a.r.w, b.r.w); if (dd > 0.12) out.push({ id: 'sb:sim' + key, parte: NOM[key], texto: `${a.r.w > b.r.w ? 'El izquierdo' : 'El derecho'} es ${f1(Math.abs(a.r.w - b.r.w) * cm)} cm más grueso que el otro. Si los dos brazos están igual de tensos, iguálalos.`, st: 'warn', at: a.r.w > b.r.w ? a.c : b.c, tip: 'Un brazo que hace fuerza (sostiene peso, se dobla) muestra el bíceps más abultado: la diferencia puede ser correcta.' }); }
@@ -395,7 +395,6 @@
     return out;
   }
   function anchosPiernas(A) {
-    M.anchos = [];
     if (!silueta() && !cuadro()) return [];
     const F = fem(), kc = kComp(), u = A.u, cmCab = S.altura / A.C.H, cm = cmCab / u, nk = GROSOR_NINOS[S.edad], tk = nk ? 1.4 : 1;
     const W = nk ? { mus: nk.mus, mid: nk.mid, rod: nk.rod, pan: nk.pan, tob: nk.tob } : F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
@@ -418,7 +417,7 @@
     for (const key of Object.keys(W)) for (const lado of ['izq', 'der']) {
       const md = medidas[key + lado]; if (!md) continue;
       const ideal = W[key] * kc * u, q = md.r.w / ideal, st = Math.abs(q - 1) > 0.3 * tk ? 'bad' : Math.abs(q - 1) > 0.18 * tk ? 'warn' : 'ok';
-      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano' });
+      M.anchos.push({ A: md.r.A, B: md.r.B, t: f1(md.r.w * cm) + ' cm', st, id: md.r.id, c: md.r.c, dir: md.r.dir, a: md.r.a, b: md.r.b, man: md.r.fuente === 'ajustado a mano', q, zona: 'pierna' });
       if (st !== 'ok') out.push({ id: 's:' + key + lado, parte: `${NOM[key]} ${lado}.`, texto: `Grosor ≈ ${f1(md.r.w * cm)} cm; el canon de ${quienCanon()} pide ≈ ${f1(ideal * cm)} cm. ${q > 1 ? 'Adelgázalo' : 'Dale volumen'} ${f1(Math.abs(md.r.w - ideal) * cm)} cm en total (medido ${md.r.fuente === 'ajustado a mano' ? 'con tus bordes' : 'en la imagen; si el borde está mal, arrastra sus extremos'}).`, st, at: md.c, tip: TIP[key] });
     }
     for (const key of Object.keys(W)) {
@@ -922,10 +921,10 @@
     const W = F ? { mus: 0.82, mid: 0.68, rod: 0.47, pan: 0.5, tob: 0.3 } : { mus: 0.75, mid: 0.65, rod: 0.48, pan: 0.52, tob: 0.33 };
     const L = {
       cuerpo: [['alt', 'Altura total (de pie)', 'del punto más alto del cráneo al suelo', C.H], ['cab', 'Cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['hom', 'Ancho de hombros', 'de borde a borde exterior de los hombros', (F ? 1.75 : 2) * kc], ['ua', 'Brazo', 'del hombro (acromion) al codo', C.ua], ['fa', 'Antebrazo', 'del codo a la muñeca', C.fa], ['mano', 'Mano', 'de la muñeca a la punta del dedo medio', C.hand], ['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta del dedo más largo', C.foot]].concat(a || GROSOR_NINOS[S.edad] ? [['gbra', 'Grosor del brazo', 'de lado a lado, a mitad del bíceps', (F ? 0.36 : 0.42) * kc], ['gcod', 'Grosor del codo', 'de lado a lado', (F ? 0.28 : 0.33) * kc], ['gant', 'Grosor del antebrazo', 'en su parte más ancha, bajo el codo', (F ? 0.32 : 0.38) * kc], ['gmun', 'Grosor de la muñeca', 'de lado a lado', (F ? 0.22 : 0.25) * kc]] : []),
-      torso: [['pecho', 'Ancho del pecho', 'de lado a lado, a la altura de los pezones', (F ? 1.3 : 1.45) * kc], ['cint', 'Ancho de cintura', 'en la parte más estrecha', (F ? 1.05 : 1.25) * kc], ['cad', 'Ancho de caderas', 'en la parte más ancha (trocánteres)', (F ? 1.6 : 1.45) * kc], ['cuepez', 'Hueco del cuello → pezones', 'en vertical', F ? 0.8 : 0.67], ['pezpez', 'Entre pezones', 'de pezón a pezón', F ? 0.94 : 1], ['pezomb', 'Pezones → ombligo', 'en vertical', F ? 0.9 : 1], ['ombpub', 'Ombligo → pubis', 'en vertical', 1]],
-      piernas: [['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta', C.foot]].concat(a ? [['gmus', 'Grosor muslo (arriba)', 'de lado a lado, bajo la ingle', W.mus * kc], ['gmid', 'Grosor muslo (mitad)', 'de lado a lado', W.mid * kc], ['grod', 'Grosor rodilla', 'de lado a lado', W.rod * kc], ['gpan', 'Grosor pantorrilla', 'en su parte más ancha', W.pan * kc], ['gtob', 'Grosor tobillo', 'sobre los maléolos', W.tob * kc]] : []),
+      torso: [['tron', 'Tronco completo', 'del hueco del cuello (entre las clavículas) a la línea de las caderas', C.torso], ['pecho', 'Ancho del pecho', 'de lado a lado, a la altura de los pezones', (F ? 1.3 : 1.45) * kc], ['cint', 'Ancho de cintura', 'en la parte más estrecha', (F ? 1.05 : 1.25) * kc], ['cad', 'Ancho de caderas', 'en la parte más ancha (trocánteres)', (F ? 1.6 : 1.45) * kc], ['cuepez', 'Hueco del cuello → pezones', 'en vertical', F ? 0.8 : 0.67], ['pezpez', 'Entre pezones', 'de pezón a pezón', F ? 0.94 : 1], ['pezomb', 'Pezones → ombligo', 'en vertical', F ? 0.9 : 1], ['ombpub', 'Ombligo → pubis', 'en vertical', 1]],
+      piernas: [['pcom', 'Pierna completa', 'de la cadera (trocánter) al tobillo', C.thigh + C.shin], ['thigh', 'Muslo', 'de la cadera (trocánter) al centro de la rodilla', C.thigh], ['shin', 'Pierna', 'del centro de la rodilla al tobillo', C.shin], ['pie', 'Pie', 'del talón a la punta', C.foot]].concat(a ? [['gmus', 'Grosor muslo (arriba)', 'de lado a lado, bajo la ingle', W.mus * kc], ['gmid', 'Grosor muslo (mitad)', 'de lado a lado', W.mid * kc], ['grod', 'Grosor rodilla', 'de lado a lado', W.rod * kc], ['gpan', 'Grosor pantorrilla', 'en su parte más ancha', W.pan * kc], ['gtob', 'Grosor tobillo', 'sobre los maléolos', W.tob * kc]] : []),
       rostro: [['rcab', 'Alto de la cabeza', 'del punto más alto del cráneo a la barbilla', 1], ['ranc', 'Ancho de la cabeza', 'de sien a sien (sobre las orejas)', 0.7], ['rter', 'Cada tercio de la cara', 'p. ej. de las cejas a la base de la nariz', 0.27], ['rojo', 'Ancho de un ojo', 'del lagrimal a la comisura externa', 0.13], ['rio', 'Entre ojos', 'de lagrimal a lagrimal', 0.13], ['rnar', 'Ancho de la nariz', 'de ala a ala', 0.15], ['rboc', 'Ancho de la boca', 'de comisura a comisura', 0.22], ['rore', 'Alto de la oreja', 'del borde superior al lóbulo', 0.27]],
-      manos: [['mlar', 'Largo de la mano', 'de la muñeca a la punta del dedo medio', C.hand], ['mpal', 'Largo de la palma', 'de la muñeca al nudillo del dedo medio', C.hand * 0.57], ['manc', 'Ancho de la palma', 'de borde a borde, en los nudillos', (F ? 0.34 : 0.37) * kc], ['mmed', 'Dedo medio', 'del nudillo a la punta', C.hand * 0.43]],
+      manos: [['mlar', 'Largo de la mano', 'de la muñeca a la punta del dedo medio', C.hand], ['mpal', 'Largo de la palma', 'de la muñeca al nudillo del dedo medio', C.hand * 0.57], ['manc', 'Ancho de la palma', 'de borde a borde, en los nudillos', (F ? 0.34 : 0.37) * kc], ['mmed', 'Dedo medio', 'del nudillo a la punta', C.hand * 0.43], ['bcom', 'Brazo completo', 'del hombro (acromion) a la punta del dedo medio', C.ua + C.fa + C.hand], ['ua', 'Brazo', 'del hombro al codo', C.ua], ['fa', 'Antebrazo', 'del codo a la muñeca', C.fa]].concat(a || GROSOR_NINOS[S.edad] ? [['gbra', 'Grosor del brazo', 'a mitad del bíceps', (F ? 0.36 : 0.42) * kc], ['gant', 'Grosor del antebrazo', 'en su parte más ancha', (F ? 0.32 : 0.38) * kc], ['gmun', 'Grosor de la muñeca', 'de lado a lado', (F ? 0.22 : 0.25) * kc]] : []),
     };
     const ancho = ['gbra', 'gcod', 'gant', 'gmun', 'hom', 'pecho', 'cint', 'cad', 'gmus', 'gmid', 'grod', 'gpan', 'gtob', 'ranc', 'rnar', 'rboc', 'manc'];
     return (L[S.modo] || []).map(([k, lab, como, cab]) => ({ k, lab, como, cm: cab * S.altura / C.H, ancho: ancho.includes(k) }));
@@ -1054,6 +1053,7 @@
   const boton = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (ev) => { if (!b.dataset.keep) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); fn(ev, b); }; document.querySelector('#sMas .grid3').appendChild(b); return b; };
   window.Modos = { dibujar, tick, pointerdown, pointermove, pointerup, botones, proyecto: () => M.proyecto, setModo, _M: M,
     capa: (f) => M.capas.push(f), prov: (f) => M.prov.push(f), ptr: (o) => M.ptr.unshift(o), boton, MODOS, vstate, f1, COL, fem, rostro: () => F, silueta, cuadro, medir, etiqueta, dibujarThumb, superponer, refrescar: () => { M.sigList = ''; lastCorr = 0; },
+    corrCuerpo, anchosBrazos, anchosPiernas, anchosTorso, torsoGeo, fem, kComp, enPerfil,
     listaCompas, corr: () => M.corr, seleccion: () => M.sel, seleccionar: (id) => { M.sel = id; const c = M.corr.find(x => x.id === id); S.focus = c && c.seg || null; M.sigList = ''; },
     marcarHecho: (id) => { const b = document.querySelector(`[data-ok="${id}"]`); if (b) b.click(); }, consejoTexto: () => conTexto, guardarProgreso, nav };
   setTimeout(() => { E.refreshButtons(); pintarMini(); }, 50);

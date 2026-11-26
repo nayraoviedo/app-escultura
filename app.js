@@ -181,7 +181,9 @@
   }
   async function detectFrame() {
     if (S.busy || !S.poseReady || S.mode !== 'auto' || S.src !== 'cam' || S.frozen || vid.readyState < 2) return;
-    if (S.modo === 'rostro' || S.modo === 'manos' || S.modo === 'animal') return;
+    if (S.modo === 'rostro' || S.modo === 'animal') return;
+    // En «Mano y brazo» el detector de manos también trabaja: la pose (para el brazo) va cada 3 cuadros
+    if (S.modo === 'manos' && (S.nManos = (S.nManos || 0) + 1) % 3) return;
     S.busy = true;
     try { if (S.stillSent) { S.pose.reset(); S.stillSent = false; } await S.pose.send({ image: vid }); } catch (e) { console.error(e); }
     S.busy = false;
