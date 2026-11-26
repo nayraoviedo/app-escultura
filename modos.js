@@ -695,6 +695,7 @@
   // ======================= Consejo =======================
   let conTexto = '';
   const GENERAL = {
+    relieve: 'En el relieve, las medidas de frente siguen el canon y solo se comprime la profundidad: lo cercano conserva más volumen que lo lejano.',
     animal: 'En los animales y los híbridos, mide todo en largos de cabeza del propio animal. En un híbrido, la clave es la unión: que la transición entre las dos anatomías sea creíble.',
     cuerpo: 'Mira la escultura desde lejos y con los ojos entrecerrados: así ves las masas y la proporción general antes que los detalles.',
     torso: 'Construye el tórax como una caja ovalada y la pelvis como otra; el abdomen las une. La línea de los hombros y la de las caderas casi nunca son paralelas en una pose viva.',
@@ -828,6 +829,7 @@
   // ======================= Figura en miniatura =======================
   function pintarMini() {
     const cv = $('mini'), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (r.height < 40 || r.width < 10) return;
     cv.width = r.width * dpr; cv.height = r.height * dpr;
     const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, r.width, r.height);
     const C = E.canonActual(), u = (r.height - 6) / C.H, cx = r.width / 2, y0 = 3, F = fem();
@@ -1036,7 +1038,7 @@
   const boton = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (ev) => { if (!b.dataset.keep) document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open')); fn(ev, b); }; document.querySelector('#sMas .grid3').appendChild(b); return b; };
   window.Modos = { dibujar, tick, pointerdown, pointermove, pointerup, botones, proyecto: () => M.proyecto, setModo, _M: M,
     capa: (f) => M.capas.push(f), prov: (f) => M.prov.push(f), ptr: (o) => M.ptr.unshift(o), boton, MODOS, vstate, f1, COL, fem, rostro: () => F, silueta, cuadro, medir, etiqueta, dibujarThumb, superponer, refrescar: () => { M.sigList = ''; lastCorr = 0; },
-    corr: () => M.corr, seleccion: () => M.sel, seleccionar: (id) => { M.sel = id; const c = M.corr.find(x => x.id === id); S.focus = c && c.seg || null; M.sigList = ''; },
+    listaCompas, corr: () => M.corr, seleccion: () => M.sel, seleccionar: (id) => { M.sel = id; const c = M.corr.find(x => x.id === id); S.focus = c && c.seg || null; M.sigList = ''; },
     marcarHecho: (id) => { const b = document.querySelector(`[data-ok="${id}"]`); if (b) b.click(); }, consejoTexto: () => conTexto, guardarProgreso, nav };
   setTimeout(() => { E.refreshButtons(); pintarMini(); }, 50);
 })();

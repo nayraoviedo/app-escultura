@@ -16,7 +16,7 @@
     frozen: false,
     mode: 'auto',         // 'auto' | 'manual'
     ghost: true, mirror: false, plumb: false, contrast: false, voice: false,
-    edad: 'adulto8', sexo: 'hombre', comp: 'media', altura: 40,
+    edad: 'adulto8', sexo: 'hombre', comp: 'media', altura: 40, alturaFinal: null, contr: 0, material: 'plastilina',
     lm: null, world: null,       // resultados de pose (normalizados)
     manual: null,                // puntos manuales en px de imagen
     analysis: null,
@@ -29,7 +29,7 @@
     fuente: 'canon', custom: null,   // proporciones: canon clásico o "mi referencia" 
   };
   try { Object.assign(S, JSON.parse(localStorage.getItem('escultor') || '{}'), { src: null, frozen: false }); } catch (e) {}
-  const save = () => { try { localStorage.setItem('escultor', JSON.stringify({ fuente: S.fuente, custom: S.custom, edad: S.edad, sexo: S.sexo, comp: S.comp, altura: S.altura, mirror: S.mirror, plumb: S.plumb, contrast: S.contrast, ghost: S.ghost, mode: S.mode })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem('escultor', JSON.stringify({ alturaFinal: S.alturaFinal, contr: S.contr, material: S.material, fuente: S.fuente, custom: S.custom, edad: S.edad, sexo: S.sexo, comp: S.comp, altura: S.altura, mirror: S.mirror, plumb: S.plumb, contrast: S.contrast, ghost: S.ghost, mode: S.mode })); } catch (e) {} };
 
   function canonActual() {
     const C = CANON.get(S.edad, S.sexo, S.comp);
@@ -850,7 +850,8 @@
   }
   function paintSet() {
     for (const [el, key] of [[optEdad, 'edad'], [$('optSexo'), 'sexo'], [$('optComp'), 'comp']]) el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === S[key]));
-    $('inAltura').value = S.altura;
+    $('inAltura').value = S.alturaFinal;
+    if ($('altTrabajo')) $('altTrabajo').innerHTML = S.contr ? `Con la contracción de <b>${S.material}</b> (${Math.round(S.contr * 1000) / 10}%), modela la pieza a <b>${(Math.round(S.altura * 10) / 10).toString().replace('.', ',')} cm</b>. Todas las medidas de la app ya están agrandadas.` : '';
     const C = canonActual();
     $('notaFigura').textContent = C.nota;
     $('bFuenteCanon').classList.toggle('on', S.fuente !== 'ref');
@@ -860,7 +861,8 @@
     lastTable = 0;
   }
   bindSeg(optEdad, 'edad'); bindSeg($('optSexo'), 'sexo'); bindSeg($('optComp'), 'comp');
-  $('inAltura').oninput = (e) => { const v = parseFloat(e.target.value); if (v > 0) { S.altura = v; save(); lastTable = 0; } };
+  $('inAltura').oninput = (e) => { const v = parseFloat(e.target.value); if (v > 0) { S.alturaFinal = v; S.altura = v / (1 - (S.contr || 0)); save(); lastTable = 0; if ($('altTrabajo')) paintSet(); } };
+  if (S.alturaFinal == null) S.alturaFinal = S.altura; S.altura = S.alturaFinal / (1 - (S.contr || 0));
 
   // ---------- Calco ----------
   const refImg = $('refImg'), refLayer = $('refLayer');
@@ -938,7 +940,7 @@
   // API para modos.js
   window.EscAPI = {
     S, ctx, toScr, toImg, line, circle, label, arrow, canonActual, say, hablar, explicar, correcciones, COL, NOMBRE, flash, openSheet, refreshButtons, startCam, stopCam, detectStill, ensurePose, seedManual, PCOL, KLABEL, VNAME,
-    get fit() { return fit; }, get cw() { return cw; }, get ch() { return ch; }, get vid() { return vid; },
+    save, paintSet, get fit() { return fit; }, get cw() { return cw; }, get ch() { return ch; }, get vid() { return vid; },
     fuente: () => (S.frozen && S.snap) ? S.snap : (S.src === 'cam' ? (vid.readyState >= 2 ? vid : null) : (S.src === 'foto' ? S.img : null)),
     poseState: () => ({ ready: S.poseReady, loading: S.poseLoading }),
     setSeg: (on) => { if (S.segOn === on) return; S.segOn = on; S.seg = null; if (S.pose) { try { S.pose.setOptions({ enableSegmentation: on }); } catch (e) {} } },

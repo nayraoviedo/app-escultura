@@ -83,14 +83,14 @@
   let instalar = null;
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); instalar = e; btnInst.style.display = ''; });
   const btnInst = MO.boton('📲 Instalar ESCULTOR como app', async () => { if (instalar) { instalar.prompt(); await instalar.userChoice; instalar = null; } else flash('En Chrome: menú ⋮ ▸ «Instalar app» o «Añadir a pantalla de inicio».', '', 7000); });
-  const ARCHIVOS_OFF = ['index.html', 'app.js', 'canon.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
+  const ARCHIVOS_OFF = ['index.html', 'app.js', 'canon.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
     'mp/pose.js', 'mp/pose_web.binarypb', 'mp/pose_solution_packed_assets.data', 'mp/pose_solution_packed_assets_loader.js', 'mp/pose_solution_simd_wasm_bin.js', 'mp/pose_solution_simd_wasm_bin.wasm', 'mp/pose_solution_simd_wasm_bin.data', 'mp/pose_solution_wasm_bin.js', 'mp/pose_solution_wasm_bin.wasm', 'mp/pose_landmark_full.tflite',
     'mp/face/face_mesh.js', 'mp/face/face_mesh.binarypb', 'mp/face/face_mesh_solution_packed_assets.data', 'mp/face/face_mesh_solution_packed_assets_loader.js', 'mp/face/face_mesh_solution_simd_wasm_bin.js', 'mp/face/face_mesh_solution_simd_wasm_bin.wasm', 'mp/face/face_mesh_solution_simd_wasm_bin.data', 'mp/face/face_mesh_solution_wasm_bin.js', 'mp/face/face_mesh_solution_wasm_bin.wasm',
     'mp/hands/hands.js', 'mp/hands/hands.binarypb', 'mp/hands/hands_solution_packed_assets.data', 'mp/hands/hands_solution_packed_assets_loader.js', 'mp/hands/hands_solution_simd_wasm_bin.js', 'mp/hands/hands_solution_simd_wasm_bin.wasm', 'mp/hands/hands_solution_simd_wasm_bin.data', 'mp/hands/hands_solution_wasm_bin.js', 'mp/hands/hands_solution_wasm_bin.wasm', 'mp/hands/hand_landmark_full.tflite',
     'pdf/pdf.min.js', 'pdf/pdf.worker.min.js'];
   MO.boton('📥 Descargar todo para usar sin internet', async () => {
     if (!('caches' in window)) { flash('Este navegador no permite guardar la app para usarla sin conexión.', 'warn'); return; }
-    const c = await caches.open('escultor-v1'); let n = 0;
+    const c = await caches.open('escultor-v2'); let n = 0;
     for (const f of ARCHIVOS_OFF) { try { const r = await fetch(f, { cache: 'no-cache' }); if (r.ok) { await c.put(f, r.clone()); } } catch (e) {} n++; if (n % 5 === 0) flash(`📥 Guardando para uso sin conexión… ${n}/${ARCHIVOS_OFF.length}`, '', 2000); }
     flash('✅ Listo: ESCULTOR y sus detectores funcionan sin internet (la búsqueda en la Biblioteca sí necesita conexión).', 'ok', 8000);
   });

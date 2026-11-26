@@ -10,10 +10,11 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 
 ## Cómo empezar
 1. Abre la app en Chrome y permite la cámara.
-2. Elige el **modo** arriba (Cuerpo, Torso, Rostro, Manos, Piernas y pies, Animales).
-3. Pulsa **📷 Foto** o abre la cámara (*Más ▸ Cámara*). Mejor con el teléfono quieto (trípode), vertical y a media altura de la pieza.
-4. En **⚙️** indica la figura: edad, sexo, complexión y **altura final en cm**.
-5. Sigue el panel **Correcciones pendientes**: *Ver en cámara* te señala la parte; cuando la arregles, *Marcar como corregido*.
+2. Responde **«¿Qué vas a esculpir?»** (busto, figura completa, relieve, animal, criatura, estudio de manos o pies): la app muestra solo los modos y herramientas que sirven para ese trabajo. Lo cambias tocando el subtítulo junto al logo. Un **recorrido de 5 pasos** te muestra dónde está cada cosa.
+3. Elige el **modo** arriba (Cuerpo, Torso, Rostro, Manos, Piernas y pies, Animales, Relieve). Debajo de la imagen tienes los **accesos rápidos** del modo (expresión, ropa, anatomía, armazón, cabello, simetría…).
+4. Pulsa **📷 Foto** o abre la cámara (*Más ▸ Cámara*). Mejor con el teléfono quieto (trípode), vertical y a media altura de la pieza.
+5. En **⚙️** indica la figura: edad, sexo, complexión, **altura final en cm** y el **material** (la app agranda las medidas según cuánto encoge: terracota ~10%, gres ~12%, porcelana ~15%, bronce ~2%…).
+6. Sigue el panel **Correcciones pendientes**: *Ver en cámara* te señala la parte; cuando la arregles, *Marcar como corregido*.
 
 **Instalarla y usarla sin internet:** *Más ▸ 📲 Instalar ESCULTOR como app* y luego *Más ▸ 📥 Descargar todo para usar sin internet*.
 
@@ -28,6 +29,7 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 | **Manos** | Largo de cada dedo frente al medio, dedo medio frente a palma, **ancho de la palma** y flexión de cada dedo |
 | **Piernas y pies** | Largos, simetría, eje cadera–rodilla–tobillo, **grosor** de muslo, rodilla, pantorrilla y tobillo, y largo del pie |
 | **Animales e híbridos** | Plantillas de puntos y canon por especie (ver abajo) |
+| **Relieve** | Bajo, medio, alto o aplastado (schiacciato): profundidad total sugerida y **mapa de alturas** (cuántos cm sobresale cada parte), en tres planos |
 
 Las vistas **Frente / Lado der. / Lado izq. / Espalda** guardan cada una su imagen. Con frente y lado, la app combina ambas y calcula **medidas 3D reales**.
 
@@ -40,7 +42,7 @@ Cada criatura trae una nota cultural, consejos para la **unión** entre sus part
 
 ---
 
-## Herramientas (botón **Más ▾**)
+## Herramientas (botón **Más ▾**, ordenado por secciones y con buscador)
 - **Medir:** cm de cada parte y ángulos de codos y rodillas sobre la imagen.
 - **🧭 Medir con compás:** escribe lo que mides en el barro y la app te dice cuánto corregir. Es lo más fiable: no depende de la cámara.
 - **📏 Regla:** mide con dos toques.
@@ -49,6 +51,10 @@ Cada criatura trae una nota cultural, consejos para la **unión** entre sus part
 - **⟷ Espejo de simetría:** refleja una mitad sobre la otra y marca en rojo lo que no coincide.
 - **Calcar:** imagen de referencia sobre la cámara (opacidad, mover, girar, **🎯 Alinear** a hombros y caderas). **◑ Comparar silueta:** en rojo lo que sobra y en azul lo que falta.
 - **💇 Cabello según la pose:** lee la energía de la pose (inclinación, contrapposto, brazos, piernas, hacia dónde mira) y sugiere un peinado en armonía —recogido, cayendo con la gravedad o al viento— y dibuja su dirección y el volumen máximo recomendado.
+- **🙂 Expresiones del rostro** (alegría, tristeza, enojo, sorpresa): qué músculos cambian, qué expresión parece tener tu pieza y flechas de qué mover (cejas, párpados, comisuras, boca).
+- **🧵 Pliegues de ropa** (pollera, poncho, aguayo, túnica, manto): dibuja los pliegues sobre la pose según los puntos de apoyo y explica qué tipo usar (columna, zigzag, medio nudo, espiral, caída en U, tensión, reposo).
+- **🦴 Plano del armazón:** largos en cm de cada tramo de alambre, dibujo, calibre sugerido y alambre total; también **sobre la cámara**, en la pose de tu figura.
+- **🖨️ Hoja de medidas:** todas las medidas del canon (con la contracción incluida) y el armazón, para imprimir o guardar en PDF.
 - **🦴 Anatomía:** esqueleto y músculos sobre la pose; toca uno para saber qué es y cómo modelarlo.
 - **🔄 Vuelta completa:** 8 vistas en la torneta y comparación de siluetas opuestas.
 - **📐 Ampliar desde maqueta:** factor y conversor de medidas.
