@@ -16,7 +16,8 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 3. Elige el **modo** arriba (Cuerpo, Torso, Rostro, Manos, Piernas y pies, Animales, Relieve). Debajo de la imagen tienes los **accesos rápidos** del modo (expresión, ropa, anatomía, armazón, cabello, simetría…).
 4. Pulsa **📷 Foto** o abre la cámara (*Más ▸ Cámara*). Mejor con el teléfono quieto (trípode), vertical y a media altura de la pieza.
 5. En **⚙️** indica la figura: edad, sexo, complexión, **altura final en cm** y el **material** (la app agranda las medidas según cuánto encoge: terracota ~10%, gres ~12%, porcelana ~15%, bronce ~2%…).
-6. Sigue el panel **Correcciones pendientes**: *Ver en cámara* te señala la parte; cuando la arregles, *Marcar como corregido*.
+6. **🎯 Solo cámara** (primer botón de abajo, o el botón ⛶ sobre la imagen): pantalla limpia con la cámara a pantalla completa y **una corrección grande** abajo (◀ ▶, 🔊 Leer, ✓ Hecho; ▾ la oculta). Arriba: Salir, Congelar, Voz y 📸 Guardar. Se sale con «atrás». En *Más* puedes hacer que la cámara se abra siempre así.
+7. Sigue el panel **Correcciones pendientes**: *Ver en cámara* te señala la parte; cuando la arregles, *Marcar como corregido*.
 
 **Instalarla y usarla sin internet:** *Más ▸ 📲 Instalar ESCULTOR como app* y luego *Más ▸ 📥 Descargar todo para usar sin internet*.
 
@@ -66,6 +67,8 @@ Cada criatura trae una nota cultural, consejos para la **unión** entre sus part
 - **💾 Copia de seguridad / 📂 Restaurar:** todo en un archivo, para guardarlo en Google Drive.
 
 ## Biblioteca de referencias
+**🛡️ Búsqueda segura** (activada por defecto, se cambia en ⚙️ *Ajustes de la app*): oculta fotos explícitas y deja solo obras de arte y láminas (esculturas, estatuas, dibujos, anatomía).
+
 - Busca en **Wikimedia Commons**, **Openverse** y modelos 3D de **Sketchfab**, en español o en **chino** (la app traduce los términos).
 - Cada imagen guarda **autor, licencia y origen**. Respeta la licencia y cita al autor si publicas una obra basada en ella.
 - **Mis referencias:** sube fotos o **PDF** (libros de anatomía, láminas), organiza por colecciones y proyectos; funcionan sin conexión.
@@ -108,12 +111,15 @@ Ver [`entrenamiento/LEEME.md`](entrenamiento/LEEME.md): guarda ejemplos corregid
 | `extra.js` | Voz, uso sin conexión, simetría, copias, vista grande, maqueta, torneta, comparar silueta, 3D |
 | `anatomia.js` | Capas de esqueleto y músculos |
 | `animales.js` | Animales, criaturas andinas e híbridos |
+| `limpio.js` | «Solo cámara»: pantalla limpia con una corrección grande |
 | `nativo.js` | Puente con la app Android (voz, micrófono, archivos, imprimir); en el navegador no hace nada |
 | `flutter_app/` | App Flutter para Android (`lib/main.dart`, `tool/preparar_android.py`) |
 | `.github/workflows/apk.yml` | Compila el APK en GitHub y lo publica |
 | `sw.js`, `manifest.webmanifest` | App instalable y sin conexión |
 | `mp/` | Detectores MediaPipe (pose, rostro, manos) |
 | `pdf/` | pdf.js |
+
+**Tus fotos:** las fotos de progreso se guardan dentro de la app, en tu teléfono. Para llevarlas a **Google Drive** o a tu galería: *Progreso ▸ 💾 Guardar / compartir* en cada foto, o *Más ▸ Copia de seguridad* para todo junto.
 
 **Privacidad:** fotos, referencias y medidas se guardan solo en tu dispositivo. Solo salen a internet las búsquedas de la Biblioteca y el reconocimiento de voz de Chrome.
 

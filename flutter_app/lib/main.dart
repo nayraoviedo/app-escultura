@@ -226,7 +226,7 @@ class _PantallaState extends State<Pantalla> {
         if (w != null) {
           // Primero cierra paneles abiertos; si no había ninguno, vuelve atrás o sale.
           final cerro = await w.evaluateJavascript(source: """(function(){
-            var s=document.querySelectorAll('.sheet.open'); if(s.length){s.forEach(function(x){x.classList.remove('open')});return true;}
+            var s=document.querySelectorAll('.sheet.open'); if(!s.length&&window.EscultorAtras&&EscultorAtras())return true; if(s.length){s.forEach(function(x){x.classList.remove('open')});return true;}
             var o=['libSave','libAn','libDet','lib'].map(function(i){return document.getElementById(i)}).filter(function(e){return e&&e.classList.contains('open')});
             var p=Array.prototype.slice.call(document.querySelectorAll('[id^="pg"].open'));
             var t=o.concat(p); if(t.length){t[0].classList.remove('open');return true;} return false;})()""");

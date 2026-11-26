@@ -280,7 +280,10 @@
   }
   function etiqueta(q, t, col) { const x = E.ctx; x.font = '600 12px system-ui'; const w = x.measureText(t).width; x.fillStyle = 'rgba(10,10,16,.7)'; x.fillRect(q.x + 4, q.y - 9, w + 8, 18); x.fillStyle = col || '#d8ccff'; x.fillText(t, q.x + 8, q.y + 4); }
   function dibAnchos() {
+    // En «Solo cámara» se dibuja solo el grosor de la corrección elegida, para no amontonar etiquetas
+    const limpio = document.body.classList.contains('limpio'), cs = limpio && M.corr.find(x => x.id === M.sel), foco = cs && cs.at && E.toScr(cs.at);
     for (const a of (M.anchos || [])) {
+      if (limpio) { if (!foco) continue; const cc = E.toScr(a.c || { x: (a.A.x + a.B.x) / 2, y: (a.A.y + a.B.y) / 2 }); if (Math.hypot(cc.x - foco.x, cc.y - foco.y) > 45) continue; }
       const A1 = E.toScr(a.A), B1 = E.toScr(a.B), dr = M.edgeDrag && M.edgeDrag.id === a.id;
       E.line(A1, B1, 2.5, COL[a.st] || '#fff');
       for (const q of [A1, B1]) E.circle(q, dr ? 9 : 6.5, 'rgba(255,255,255,.25)', '#fff');
@@ -884,9 +887,22 @@
   const urls = new Map(); const surl = (s) => { if (!urls.has(s.id)) urls.set(s.id, URL.createObjectURL(s.img)); return urls.get(s.id); };
   async function pintarProgreso() {
     const l = await snaps();
-    $('pgList').innerHTML = l.length ? l.map(s => `<div class="pcard"><img src="${surl(s)}" alt=""><div><b>${new Date(s.t).toLocaleString('es')}</b><br>${MODOS[s.modo] || s.modo} · ${E.VNAME[s.vista] || ''}<br>${s.pendientes ? `⚠️ ${s.pendientes} correcciones pendientes` : '✓ Sin correcciones pendientes'}<br><button class="chip" data-del="${s.id}" style="margin-top:6px">Borrar</button></div></div>`).join('')
+    $('pgList').innerHTML = l.length ? l.map(s => `<div class="pcard"><img src="${surl(s)}" alt=""><div><b>${new Date(s.t).toLocaleString('es')}</b><br>${MODOS[s.modo] || s.modo} · ${E.VNAME[s.vista] || ''}<br>${s.pendientes ? `⚠️ ${s.pendientes} correcciones pendientes` : '✓ Sin correcciones pendientes'}<br><button class="chip" data-sh="${s.id}" style="margin-top:6px">💾 Guardar / compartir</button> <button class="chip" data-del="${s.id}" style="margin-top:6px">Borrar</button></div></div>`).join('')
       : '<p class="note">Todavía no guardaste el progreso de este proyecto.</p>';
     $('pgList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await ptx('readwrite', st => st.delete(b.dataset.del)); pintarProgreso(); });
+    $('pgList').querySelectorAll('[data-sh]').forEach(b => b.onclick = () => { const s = l.find(x => x.id === b.dataset.sh); if (s) compartirFoto(s); });
+  }
+  // Guarda una foto fuera de la app: en el teléfono abre el menú de compartir (Drive, Fotos, WhatsApp…);
+  // en la computadora la descarga.
+  async function compartirFoto(s) {
+    const d = new Date(s.t), f = d.toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+    const nombre = `escultor_${String(M.proyecto).replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').trim().replace(/\s+/g, '-') || 'proyecto'}_${f}.jpg`;
+    const file = new File([s.img], nombre, { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'ESCULTOR · ' + M.proyecto }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    E.flash([['💾 Elige «Drive» para guardarla en Google Drive, o «Fotos» para tu galería.', 'ok']], 5000);
   }
   async function pintarStats() {
     const l = (await snaps()).slice().reverse(), h = ls.get('escultorHechos', []).filter(x => x.p === M.proyecto);

@@ -43,10 +43,12 @@
     let i = l.findIndex(c => c.id === MO.seleccion()); i = (i + dir + l.length) % l.length;
     MO.seleccionar(l[i].id); decir(`${l[i].parte}. ${l[i].texto}`);
   }
-  const AYUDA_VOZ = 'Puedes decir: congelar, seguir, qué corrijo, siguiente, anterior, corregido, repite, consejo, modo cuerpo, torso, rostro, manos o piernas, espejo, plomada, simetría, medir, guardar progreso, captura, y apagar voz.';
+  const AYUDA_VOZ = 'Puedes decir: congelar, seguir, qué corrijo, siguiente, anterior, corregido, repite, consejo, modo cuerpo, torso, rostro, manos o piernas, espejo, plomada, simetría, medir, guardar progreso, captura, solo cámara, salir, y apagar voz.';
   function comando(t) {
     const has = (re) => re.test(t);
     if (has(/apaga|desactiva|silencio|deja de escuchar/)) { pararVoz(); return; }
+    if (has(/solo camara|pantalla limpia|limpia/) && window.Limpio) { Limpio.entrar(); return decir('Solo cámara.'); }
+    if (has(/salir|paneles|todo el menu/) && window.Limpio && Limpio.activo()) { Limpio.salir(); return decir('Paneles visibles.'); }
     if (has(/ayuda|comandos|que puedo decir/)) return decir(AYUDA_VOZ);
     if (has(/congela|pausa|quieto|detente|para la/)) { if (!S.frozen) $('bFreeze').click(); return decir('Imagen congelada.'); }
     if (has(/sigue|seguir|continua|reanuda/)) { if (S.frozen) $('bFreeze').click(); return decir('Seguimos en vivo.'); }
@@ -83,7 +85,7 @@
   let instalar = null;
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); instalar = e; btnInst.style.display = ''; });
   const btnInst = MO.boton('📲 Instalar ESCULTOR como app', async () => { if (instalar) { instalar.prompt(); await instalar.userChoice; instalar = null; } else flash('En Chrome: menú ⋮ ▸ «Instalar app» o «Añadir a pantalla de inicio».', '', 7000); });
-  const ARCHIVOS_OFF = ['index.html', 'app.js', 'canon.js', 'nativo.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
+  const ARCHIVOS_OFF = ['index.html', 'app.js', 'canon.js', 'nativo.js', 'lib.js', 'modos.js', 'extra.js', 'anatomia.js', 'animales.js', 'cabello.js', 'taller.js', 'arte.js', 'organizar.js', 'limpio.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
     'mp/pose.js', 'mp/pose_web.binarypb', 'mp/pose_solution_packed_assets.data', 'mp/pose_solution_packed_assets_loader.js', 'mp/pose_solution_simd_wasm_bin.js', 'mp/pose_solution_simd_wasm_bin.wasm', 'mp/pose_solution_simd_wasm_bin.data', 'mp/pose_solution_wasm_bin.js', 'mp/pose_solution_wasm_bin.wasm', 'mp/pose_landmark_full.tflite',
     'mp/face/face_mesh.js', 'mp/face/face_mesh.binarypb', 'mp/face/face_mesh_solution_packed_assets.data', 'mp/face/face_mesh_solution_packed_assets_loader.js', 'mp/face/face_mesh_solution_simd_wasm_bin.js', 'mp/face/face_mesh_solution_simd_wasm_bin.wasm', 'mp/face/face_mesh_solution_simd_wasm_bin.data', 'mp/face/face_mesh_solution_wasm_bin.js', 'mp/face/face_mesh_solution_wasm_bin.wasm',
     'mp/hands/hands.js', 'mp/hands/hands.binarypb', 'mp/hands/hands_solution_packed_assets.data', 'mp/hands/hands_solution_packed_assets_loader.js', 'mp/hands/hands_solution_simd_wasm_bin.js', 'mp/hands/hands_solution_simd_wasm_bin.wasm', 'mp/hands/hands_solution_simd_wasm_bin.data', 'mp/hands/hands_solution_wasm_bin.js', 'mp/hands/hands_solution_wasm_bin.wasm', 'mp/hands/hand_landmark_full.tflite',

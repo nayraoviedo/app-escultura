@@ -43,15 +43,37 @@
   };
   const COLS = ['Favoritos', 'Mis rostros', 'Mis manos', 'Mis poses', 'Anatomía', 'Esculturas'];
 
+  // ---------------- Búsqueda segura ----------------
+  // Activada por defecto: oculta contenido explícito y deja solo obras de arte o láminas
+  // (esculturas, estatuas, dibujos, grabados, anatomía). Se puede desactivar en la Biblioteca.
+  const BLOQUEO = /porn|erotic|erotik|eroti[cs]|sexual|\bsex\b|sex act|genital|penis|phallus|vulva|vagina|labia|clitor|scrot|testic|masturb|intercourse|coitus|orgasm|bdsm|bondage|fetish|nsfw|xxx|hentai|onlyfans|playboy|naturis|nudis|topless|lingerie|underwear|bikini|stripper|striptease|nude (photograph|photo|model|women|woman|men|man|people|girl|boy|female|male)|naked (women|woman|men|man|people|girl|boy)|(photograph|photo)s? of nude|nudity in photography|selfie|desnudo fotograf|sexo|pene|vagina|desnudas?\b(?! en el arte)/i;
+  const ARTE = /sculpt|statue|statua|bust\b|busto|relief|bas-relief|bronze|marble|terracotta|plaster|cast\b|figurine|carving|museum|museo|louvre|glyptothek|drawing|sketch|engraving|etching|lithograph|woodcut|illustration|anatom|écorché|ecorche|skelet|muscle|plate\b|lámina|lamina|escultur|estatua|dibujo|grabado|mármol|marmol|bronce|yeso|arcilla|clay|ceramic|cerámic|pottery|maquette|model\b|3d|\bart\b|artwork|painting|pintura|fresco|mosaic|antique|ancient|classical|greek|roman|renaissance|baroque|gothic|medieval|figure study|life drawing|academy|académic|academic/i;
+  // textos: se revisan para bloquear y para reconocer arte; extra: solo para reconocer arte
+  function permitido(textos, extra) {
+    if (!L.segura) return true;
+    const t = textos.filter(Boolean).join(' · ');
+    if (BLOQUEO.test(t)) return false;
+    return ARTE.test(t + ' · ' + (extra || ''));
+  }
+  // categorías como «Penis in art» o «Nude sculptures» describen arte: no se bloquean por eso
+  const catArte = (c) => / in art|sculpt|statue|painting|drawing|engraving|museum|antiquit/i.test(c);
+  // si la búsqueda no habla de arte, se pide arte (esculturas o dibujos)
+  const conArte = (q) => (!L.segura || ARTE.test(q)) ? q : q + ' sculpture';
+
   // ---------------- Fuentes ----------------
   async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
   async function buscarWikimedia(q) {
-    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=24' +
-      '&gsrsearch=' + encodeURIComponent(q + ' filetype:bitmap') +
-      '&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=400&iiextmetadatafilter=Artist|LicenseShortName|LicenseUrl|ObjectName';
+    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6' + (L.segura ? '' : '&gsrlimit=24') +
+      '&gsrsearch=' + encodeURIComponent(conArte(q) + ' filetype:bitmap') + (L.segura ? '&gsrlimit=40' : '') +
+      '&prop=imageinfo|categories&cllimit=max&clshow=!hidden&iiprop=url|size|extmetadata&iiurlwidth=400&iiextmetadatafilter=Artist|LicenseShortName|LicenseUrl|ObjectName|ImageDescription|Categories';
     const j = await getJSON(u);
     const pages = Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
-    return pages.filter(p => p.imageinfo && p.imageinfo[0] && p.imageinfo[0].thumburl).map(p => {
+    const conImg = pages.filter(p => p.imageinfo && p.imageinfo[0] && p.imageinfo[0].thumburl);
+    const vistas = conImg.filter(p => { const md = p.imageinfo[0].extmetadata || {}, v = (k) => md[k] && strip(md[k].value);
+      const cats = (p.categories || []).map(c => c.title).concat(String(v('Categories') || '').split('|'));
+      return permitido([p.title, v('ObjectName'), v('ImageDescription'), cats.filter(c => !catArte(c)).join(' · ')], cats.join(' · ')); });
+    L.ocultas += conImg.length - vistas.length;
+    return vistas.slice(0, 24).map(p => {
       const ii = p.imageinfo[0], md = ii.extmetadata || {}, v = (k) => md[k] && md[k].value;
       const big = ii.width > 1600 || /\.(tiff?|webp)$/i.test(ii.url);
       return {
@@ -64,8 +86,11 @@
     });
   }
   async function buscarOpenverse(q) {
-    const j = await getJSON('https://api.openverse.org/v1/images/?page_size=20&q=' + encodeURIComponent(q));
-    return (j.results || []).map(r => ({
+    const j = await getJSON('https://api.openverse.org/v1/images/?mature=false&page_size=' + (L.segura ? 40 : 20) + '&q=' + encodeURIComponent(conArte(q)));
+    const todos = (j.results || []).filter(r => !r.mature);
+    const vistas = todos.filter(r => permitido([r.title, (r.tags || []).map(t => t.name).join(' '), r.source]));
+    L.ocultas += (j.results || []).length - vistas.length;
+    return vistas.slice(0, 20).map(r => ({
       id: 'ov:' + r.id, kind: 'img', title: r.title || 'Sin título',
       thumb: r.thumbnail, full: r.url, alt: r.thumbnail,
       author: r.creator || 'Desconocido', authorUrl: r.creator_url,
@@ -75,7 +100,9 @@
   }
   async function buscarSketchfab(q) {
     const j = await getJSON('https://api.sketchfab.com/v3/search?type=models&count=24&q=' + encodeURIComponent(q));
-    return (j.results || []).map(m => {
+    const vistas = (j.results || []).filter(m => !m.isAgeRestricted && (!L.segura || !BLOQUEO.test([m.name, m.description, (m.tags || []).map(t => t.name || t.slug).join(' ')].join(' '))));
+    L.ocultas += (j.results || []).length - vistas.length;
+    return vistas.map(m => {
       const ims = ((m.thumbnails && m.thumbnails.images) || []).slice().sort((a, b) => Math.abs(a.width - 400) - Math.abs(b.width - 400));
       return {
         id: 'sf:' + m.uid, kind: '3d', uid: m.uid, title: m.name || 'Modelo 3D', thumb: ims[0] && ims[0].url,
@@ -423,6 +450,8 @@
 
   // ---------------- Interfaz ----------------
   const L = { tab: 'buscar', filtro: null, fuentes: { wm: true, ov: true }, res: [], saved: [], colFiltro: 'Todas', cur: null, an: null, anOpt: { points: true, lines: true }, cmp: [] };
+  L.segura = (() => { try { const v = localStorage.getItem('escultorSegura'); return v == null ? true : v === 'true'; } catch (e) { return true; } })();
+  L.ocultas = 0;
   const KIND_TXT = { body: 'Cuerpo', face: 'Rostro', hand: 'Manos' };
 
   function abrir(tab, col) { $('lib').classList.add('open'); ESC() && ESC().closeSheets(); if (col) L.colFiltro = col; setTab(tab || L.tab); }
@@ -450,7 +479,7 @@
     const es3d = L.filtro === 'm3d';
     if (esChino(q0)) $('libEstado').dataset.zh = q0;
     $('libEstado').textContent = (esChino(q0) ? `中文 «${q0}» → ` : '') + `Buscando «${q}» en ${es3d ? 'Sketchfab' : [L.fuentes.wm && 'Wikimedia Commons', L.fuentes.ov && 'Openverse'].filter(Boolean).join(' y ')}…`;
-    $('libGrid').innerHTML = '';
+    $('libGrid').innerHTML = ''; L.ocultas = 0;
     const tareas = es3d ? [buscarSketchfab(q)] : [L.fuentes.wm ? buscarWikimedia(q) : Promise.resolve([]), L.fuentes.ov ? buscarOpenverse(q) : Promise.resolve([])];
     if (!es3d && esChino(q0) && L.fuentes.wm) tareas.push(buscarWikimedia(q0)); // también con el texto original en chino
     const rs = await Promise.allSettled(tareas);
@@ -462,8 +491,8 @@
     L.res = res;
     $('libGrid').innerHTML = res.map(it => tarjeta(it, false)).join('');
     $('libEstado').textContent = res.length
-      ? `${res.length} resultados para «${q}». Toca uno para ver su autor y licencia, analizarlo o usarlo.` + (fallos ? ' (Una fuente no respondió.)' : '')
-      : (fallos === rs.length ? 'Sin conexión o las fuentes no respondieron. Tus referencias guardadas siguen disponibles en «Mis referencias».' : 'No encontré resultados. Prueba con otras palabras (por ejemplo, en inglés).');
+      ? `${res.length} resultados para «${q}». Toca uno para ver su autor y licencia, analizarlo o usarlo.` + (fallos ? ' (Una fuente no respondió.)' : '') + (L.segura && L.ocultas ? ` 🛡️ Búsqueda segura: ${L.ocultas} ocultas.` : '')
+      : (fallos === rs.length ? 'Sin conexión o las fuentes no respondieron. Tus referencias guardadas siguen disponibles en «Mis referencias».' : (L.segura && L.ocultas ? `🛡️ La búsqueda segura ocultó ${L.ocultas} resultados que no eran obras de arte. Prueba con «escultura», «estatua» o «dibujo» en la búsqueda.` : 'No encontré resultados. Prueba con otras palabras (por ejemplo, en inglés).'));
   }
 
   async function recargarGuardadas() { try { L.saved = (await dbAll()) || []; } catch (e) { L.saved = []; } }
@@ -670,6 +699,17 @@
     $('libFil').innerHTML = Object.entries(FILTROS).map(([k, f]) => `<button class="chip" data-f="${k}">${f.label}</button>`).join('');
     $('libFil').onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; L.filtro = L.filtro === b.dataset.f ? null : b.dataset.f; $('libFil').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.f === L.filtro)); $('libSrc').style.display = L.filtro === 'm3d' ? 'none' : 'flex'; if ($('libQ').value.trim() || L.filtro) buscar(); };
     $('libSrc').onchange = () => { L.fuentes.wm = $('srcWm').checked; L.fuentes.ov = $('srcOv').checked; };
+    // Búsqueda segura: se cambia en ⚙️ Ajustes
+    function pintarSegura() {
+      document.querySelectorAll('#optSegura button').forEach(b => b.classList.toggle('on', (b.dataset.v === 'si') === L.segura));
+      $('segNota').textContent = L.segura ? '🛡️ Búsqueda segura activada (se cambia en ⚙️ Ajustes)' : '⚠️ Búsqueda segura desactivada (se cambia en ⚙️ Ajustes)';
+      $('segNota').style.color = L.segura ? 'var(--ok)' : 'var(--warn)';
+    }
+    document.querySelectorAll('#optSegura button').forEach(b => b.onclick = () => {
+      L.segura = b.dataset.v === 'si'; try { localStorage.setItem('escultorSegura', String(L.segura)); } catch (x) {}
+      pintarSegura(); L.res = []; if ($('libGrid')) $('libGrid').innerHTML = '';
+    });
+    pintarSegura();
     $('libGrid').onclick = (e) => { const c = e.target.closest('.lcard'); if (c) abrirDetalle(buscarItem(c.dataset.id)); };
     $('libMias').onclick = (e) => { const c = e.target.closest('.lcard'); if (c) abrirDetalle(buscarItem(c.dataset.id)); };
     $('libCols').onclick = (e) => { const b = e.target.closest('[data-c]'); if (b) { L.colFiltro = b.dataset.c; pintarMias(); } };
