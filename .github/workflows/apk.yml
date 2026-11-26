@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -69,6 +69,8 @@ jobs:
           ESCULTOR_KEY_PASS: ${{ secrets.ESCULTOR_KEY_PASS }}
         run: |
           flutter pub get
+          # Algunos plugins aún usan una regla de Proguard que el Gradle nuevo ya no acepta
+          find "$PUB_CACHE/hosted" -path '*/android/build.gradle*' -print0 | xargs -0 sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g"
           flutter build apk --release --build-number=${{ github.run_number }}
           cp build/app/outputs/flutter-apk/app-release.apk ../ESCULTOR.apk
 
