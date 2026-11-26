@@ -97,7 +97,7 @@
   function doodle(ch) {
     const base = ch.replace(/️/g, ''), k = MAP[base];
     if (!k || !I[k]) return null;
-    const s = document.createElement('span'); s.className = 'dd'; s.setAttribute('aria-hidden', 'true');
+    const s = document.createElement('span'); s.className = 'dd'; s.dataset.e = k; s.setAttribute('aria-hidden', 'true');
     if (COLOR[base]) s.style.color = COLOR[base];
     s.innerHTML = sv(I[k]);
     return s;

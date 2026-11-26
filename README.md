@@ -15,12 +15,21 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 ---
 
 ## Pantalla
-- **La cámara manda:** ocupa casi toda la pantalla. Sobre la imagen: el estado (cámara, figura detectada), la vista (Frente, Lados, Espalda) y el botón de **solo cámara**.
-- **Correcciones** a un lado, plegables: toca el título para abrir o cerrar.
-- **Barra inferior:** Foto · Congelar · **Herramientas** · Referencia · Voz. El botón central abre el panel con todas las herramientas (medir, espejo, plomada, calcar, maniquí, simetría, comparar, ajustar, consejos, solo cámara, anatomía…) y, abajo, **lo propio de cada modo** (especie, expresión, ropa, armazón, cabello). Al cerrarlo recuperas toda la cámara.
-- **Doodles en lugar de emojis:** todos los íconos están dibujados con línea, con trazo de mano alzada.
+Al abrir MUSA ves sobre todo **la cámara**, la zona elegida arriba (Cuerpo, Torso, Rostro, Mano y brazo…) y un botón para desplegar herramientas.
+- **Barra de acciones** (flotante, sobre la imagen): Foto · Congelar · **Herramientas** (botón redondo central) · Referencia · Voz. La **navegación** de abajo (Inicio, Progreso, Referencias, Favoritos, Estadísticas) es una barra sólida aparte.
+- **Herramientas inteligentes según el modo:** el panel muestra solo **6** herramientas, las que sirven para la zona elegida, y un botón **«Ver todas las herramientas»**:
+  - Cuerpo: Medir, Maniquí, Plomada, Anatomía, Calcar, Simetría
+  - Torso: Medir, Puntos, Simetría, Anatomía, Ropa, Calcar
+  - Rostro: Medir, Calcar, Facciones, Simetría, Orejas, Cabello
+  - Mano y brazo: Medir, Calcar, Compás, Regla, Anatomía, Espejo
+  - Piernas: Medir, Plomada, Compás, Anatomía, Armazón, Calcar
+  - Animales: Especie, Medir, Calcar, Plomada, Compás, Simetría
+  - Relieve: Tipo de relieve, Profundidad, Medir, Calcar, Plomada, Anatomía
+- Las **opciones** (tipo de ropa, expresión, especie, tipo de relieve) aparecen solo al tocar esa herramienta.
+- El botón central abre y cierra el panel sin cambiar de pantalla; cerrado, la cámara queda casi a pantalla completa. El botón ⛶ deja **solo la cámara**.
+- **Correcciones (n):** una ficha pequeña a la derecha; al tocarla se desliza una **bandeja** con el detalle. Se cierra tocando fuera o el título.
+- **Doodles en lugar de emojis** y cifras de medida solo con **Medir** activo.
 - **Ícono:** busto clásico con cinta roja, guías de proporción y desbastador, en acuarela (`docs/icono-musa.png`).
-- Las cifras y los bordes de grosor se ven solo con **Medir** activo, para que la imagen no se llene de números.
 
 ## Cómo empezar
 1. Abre la app en Chrome y permite la cámara.

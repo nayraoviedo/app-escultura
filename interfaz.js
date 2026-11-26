@@ -100,6 +100,49 @@
     @media (min-width: 1000px) { #herr { left:auto; width:560px; right:16px; } #dock { justify-content:center; gap:12px; } #dock > button { flex:0 0 84px; } #dock #dHerr { flex:0 0 120px; } }
   `;
   document.head.appendChild(css);
+  // ---- ajustes de la versión 2 (sugerencias: menos botones, herramientas según el modo, bandeja) ----
+  const css2 = document.createElement('style');
+  css2.textContent = `
+    #quick { display:none !important; }
+    .brand span { font-family:Georgia, 'Times New Roman', serif; font-style:italic; font-size:14.5px; color:#cfc6ea; }
+    /* barra de acciones: flotante, translúcida, con el botón central redondo y elevado */
+    #dock { bottom:12px; align-items:center; }
+    #dock > button { height:64px; max-width:78px; border-radius:20px; background:rgba(28,24,40,.7); }
+    #dock #dHerr { flex:0 0 78px; max-width:78px; width:78px; height:78px; border-radius:50%; padding:0; margin-top:-22px; font-size:0; gap:0;
+      box-shadow:0 0 0 7px rgba(20,18,30,.75), 0 0 26px rgba(124,92,255,.7); }
+    #dock #dHerr b { display:none; }
+    #dock #dHerr .flecha { position:absolute; top:-30px; width:22px; height:22px; color:#ddd; }
+    #dock #dHerr svg:not(.flecha) { width:34px; height:34px; }
+    #dock #dFoto b { display:none; } #dock #dFoto svg { width:30px; height:30px; }
+    /* navegación: barra sólida distinta, con indicador */
+    nav { background:#0f0d18; border-top:1px solid #241f36; padding-top:8px; }
+    nav button { position:relative; font-size:12.5px; }
+    nav button.on::after { content:''; position:absolute; left:18%; right:18%; bottom:-6px; height:3px; border-radius:3px; background:var(--acc2, #a78bfa); }
+    /* panel: 6 herramientas del modo + «Ver todas» */
+    #herr { bottom:104px; }
+    #herr h3 span { flex:1; } #herr h3 small { color:var(--muted); font-weight:400; font-size:14px; }
+    #hPrin { grid-template-columns:repeat(3, 1fr); }
+    #hPrin button { min-height:84px; font-size:14px; }
+    #hPrin button svg { width:30px; height:30px; }
+    #hTodasGrid { grid-template-columns:repeat(4, 1fr); margin-top:10px; }
+    #hTodas { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:12px; padding:13px; border-radius:16px; background:transparent; border:1.5px solid rgba(167,139,250,.6); color:#c9b8ff; font-size:15.5px; font-weight:600; }
+    #hSub { display:none; margin-top:10px; background:#1d1a2c; border:1px solid rgba(167,139,250,.35); border-radius:16px; padding:10px 12px; }
+    #hSub.on { display:block; }
+    #hSub label { display:block; color:var(--muted); font-size:13.5px; margin-bottom:6px; }
+    #hSub select { width:100%; font-size:16px; padding:11px; border-radius:12px; background:#262338; color:#fff; border:1px solid rgba(255,255,255,.12); }
+    /* correcciones: ficha cerrada a la derecha; abierta = bandeja que se desliza */
+    #corrFondo { display:none; }
+    @media (max-width: 999px) {
+      #corr.min { top:66px !important; right:10px; left:auto; width:auto; max-width:46%; background:rgba(20,18,30,.82); border-radius:18px; }
+      #corr.min #corrHead { padding:10px 12px; font-size:14px; }
+      #corr:not(.min) { top:0 !important; bottom:0 !important; right:0; width:min(88%, 380px); max-width:none; border-radius:22px 0 0 22px; z-index:9;
+        animation:bandeja .22s ease-out; box-shadow:-12px 0 40px rgba(0,0,0,.55); background:rgba(20,18,30,.97); }
+      #corr:not(.min) #corrHead { padding:16px 14px 10px; font-size:17px; }
+      #corr:not(.min) ~ #corrFondo, body.corrOn #corrFondo { display:block; position:absolute; inset:0; z-index:8; background:rgba(0,0,0,.35); }
+    }
+    @keyframes bandeja { from { transform:translateX(100%); } to { transform:none; } }
+  `;
+  document.head.appendChild(css2);
 
   const stage = $('stage');
   // ---- estado como píldora ----
@@ -118,7 +161,6 @@
     $('dCong').querySelector('i').innerHTML = ic(S.frozen ? I.seguir : I.cong);
     $('dCong').classList.toggle('on', !!S.frozen);
     $('dVoz').classList.toggle('on', !!S.voice);
-    for (const [id, src] of [['hMedir', 'bMedir'], ['hEspejo', 'bMirror'], ['hPlomada', 'bPlumb'], ['hCalcar', 'bCalco'], ['hManiqui', 'bGhost']]) { const a = $(id), b = $(src); if (a && b) a.classList.toggle('on', b.classList.contains('on')); }
   }
 
   // ---- barra inferior ----
@@ -137,43 +179,122 @@
   $('dRef').onclick = () => { const r = $('conRef'); if (r) r.click(); };
   $('dVoz').onclick = () => { S.voice = !S.voice; try { E.save(); } catch (e) {} if (E.refreshButtons) E.refreshButtons(); pintarEstado(); E.hablar(S.voice ? 'Voz activada: te leeré las correcciones.' : 'Voz desactivada.', true); };
 
-  // ---- panel de herramientas ----
-  const masBtn = (re) => [...document.querySelectorAll('#sMas button')].find(b => re.test(b.textContent.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()));
+  // ---- panel de herramientas: inteligente según el modo ----
+  Object.assign(I, {
+    facciones: '<circle cx="12" cy="12" r="8.6"/><path d="M8.4 10v.1M15.6 10v.1M8.6 14.6c2 1.8 4.8 1.8 6.8 0"/>',
+    cabello: '<path d="M6 19.6c-1.4-4.6-1.2-9 1.4-12.2 2.6-3.2 7.4-3.6 10.2-.4 2.4 2.8 2.4 7.6.6 12.6"/><path d="M9.2 8.6c.4 3.8-.4 7.6-2 11M12.6 7.6c.6 4.2.2 8.4-1.2 12M15.6 8.6c.8 3.6.6 7.4-.4 11"/>',
+    ropa: '<path d="M8.6 3.6L4 6.6l1.8 4 2-1V20.4h8.4V9.6l2 1 1.8-4-4.6-3c-.6 1.6-1.8 2.4-3.4 2.4s-2.8-.8-3.4-2.4z"/>',
+    compas: '<circle cx="12" cy="4.6" r="1.6"/><path d="M11.2 6.2L6.4 20.4M12.8 6.2l4.8 14.2M8.4 14.6c2.4 1 4.8 1 7.2 0"/>',
+    regla: '<path d="M3.3 16.8L16.6 3.4l4.1 4-13.4 13.4z"/><path d="M7 13.1l2 2M10 10.1l2 2M13 7.1l2 2"/>',
+    puntos: '<circle cx="8" cy="8" r="1.8"/><circle cx="16" cy="8" r="1.8"/><circle cx="12" cy="15.6" r="1.8"/><path d="M9.6 8h4.8M9 9.6l2 4.4M15 9.6l-2 4.4" stroke-dasharray="1.6 2"/>',
+    especie: '<path d="M5 18c1-4 3-6 7-6s6 2 7 6c-2 1-4 1-7 1s-5 0-7-1z"/><circle cx="6.5" cy="9" r="1.6"/><circle cx="10" cy="6" r="1.6"/><circle cx="14" cy="6" r="1.6"/><circle cx="17.5" cy="9" r="1.6"/>',
+    relieve: '<path d="M3.6 18.6h16.8M5.4 18.6c.8-4 2.4-7 4.4-8.4 1.4 2 2.6 2.4 4 0 2.2 1.6 3.6 4.6 4.4 8.4"/>',
+    capas: '<path d="M12 3.8l8.4 4.4-8.4 4.4-8.4-4.4z"/><path d="M3.6 12.2l8.4 4.4 8.4-4.4M3.6 16.2l8.4 4.4 8.4-4.4"/>',
+    guias: '<path d="M2.8 12c2.4-4 5.6-6 9.2-6s6.8 2 9.2 6c-2.4 4-5.6 6-9.2 6s-6.8-2-9.2-6z"/><circle cx="12" cy="12" r="2.8"/>',
+  });
+  const sinAc = (t) => (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const masBtn = (re) => [...document.querySelectorAll('#sMas button')].find(b => re.test(sinAc(b.textContent + ' ' + b.id)));
   const clic = (el) => el && el.click();
-  const H = [
-    ['hMedir', 'Medir', I.medir, () => clic($('bMedir'))],
-    ['hEspejo', 'Espejo', I.espejo, () => clic($('bMirror'))],
-    ['hPlomada', 'Plomada', I.plomada, () => clic($('bPlumb'))],
-    ['hCalcar', 'Calcar', I.calcar, () => clic($('bCalco'))],
-    ['hManiqui', 'Maniquí', I.maniqui, () => clic($('bGhost'))],
-    ['hSim', 'Simetría', I.simetria, () => clic(masBtn(/espejo de simetria/))],
-    ['hComp', 'Comparar', I.comparar, () => clic(masBtn(/comparar silueta/))],
-    ['hAjustar', 'Ajustar', I.ajustar, () => clic($('hGear'))],
-    ['hConsejo', 'Consejos', I.consejo, () => E.openSheet ? E.openSheet('sCons') : $('sCons').classList.add('open')],
-    ['hMas', 'Más', I.mas, () => clic($('bMas'))],
-    ['hLimpio', 'Solo cámara', I.limpio, () => window.Limpio && Limpio.entrar()],
-    ['hCam', 'Cámara', I.camara, () => clic($('bCam'))],
-    ['hGirar', 'Girar cámara', I.girar, () => clic($('fFlip'))],
-    ['hAnat', 'Anatomía', I.anat, () => clic(masBtn(/anatomia/))],
-    ['hAyuda', 'Ayuda', I.ayuda, () => clic($('bHelp'))],
-  ];
+  const activo = (el) => !!el && (el.classList.contains('on') || !!el.querySelector('.dd[data-e="ok"]') || /anatomia: (?!apagada)/.test(sinAc(el.textContent)));
+  // Catálogo: id → [texto, ícono, qué hace, de dónde sale su estado, tipo]
+  //   tipo 't' = se activa/desactiva (el panel queda abierto) · 's' = abre sus opciones · 'a' = abre otra pantalla (cierra el panel)
+  const T = {
+    medir: ['Medir', I.medir, () => clic($('bMedir')), () => $('bMedir'), 't'],
+    maniqui: ['Maniquí', I.maniqui, () => clic($('bGhost')), () => $('bGhost'), 't'],
+    plomada: ['Plomada', I.plomada, () => clic($('bPlumb')), () => $('bPlumb'), 't'],
+    espejo: ['Espejo', I.espejo, () => clic($('bMirror')), () => $('bMirror'), 't'],
+    calcar: ['Calcar', I.calcar, () => clic($('bCalco')), null, 'a'],
+    simetria: ['Simetría', I.simetria, () => clic(masBtn(/espejo de simetria/)), () => masBtn(/espejo de simetria/), 't'],
+    anatomia: ['Anatomía', I.anat, () => clic(masBtn(/anatomia:/)), () => masBtn(/anatomia:/), 't'],
+    armazon: ['Armazón', I.armazon, () => clic(masBtn(/armazon sobre la camara/)), () => masBtn(/armazon sobre la camara/), 't'],
+    cabello: ['Cabello', I.cabello, () => clic(masBtn(/sugerir cabello/)), () => masBtn(/sugerir cabello/), 't'],
+    puntos: ['Puntos', I.puntos, () => clic($('bTorsoPts')), () => $('bTorsoPts'), 't'],
+    orejas: ['Orejas', I.puntos, () => clic($('bTorsoPts')), () => $('bTorsoPts'), 't'],
+    compas: ['Compás', I.compas, () => clic(masBtn(/medir con compas/)), null, 'a'],
+    regla: ['Regla', I.regla, () => clic(masBtn(/regla \(2/)), () => masBtn(/regla \(2/), 't'],
+    comparar: ['Comparar', I.comparar, () => clic(masBtn(/comparar silueta/)), () => masBtn(/comparar silueta/), 't'],
+    profundidad: ['Profundidad', I.capas, () => clic(masBtn(/profundidad del relieve/)), () => masBtn(/profundidad del relieve/), 't'],
+    facciones: ['Facciones', I.facciones, 'exprSel', null, 's'],
+    ropa: ['Ropa', I.ropa, 'ropaSel', null, 's'],
+    especie: ['Especie', I.especie, 'animSel', null, 's'],
+    tipoRel: ['Tipo de relieve', I.relieve, 'relSel', null, 's'],
+    limpio: ['Solo cámara', I.limpio, () => window.Limpio && Limpio.entrar(), null, 'a'],
+    ajustar: ['Ajustar', I.ajustar, () => clic($('hGear')), null, 'a'],
+    consejos: ['Consejos', I.consejo, () => E.openSheet ? E.openSheet('sCons') : $('sCons').classList.add('open'), null, 'a'],
+    camara: ['Cámara', I.camara, () => clic($('bCam')), () => $('bCam'), 't'],
+    girar: ['Girar cámara', I.girar, () => clic($('fFlip')), null, 't'],
+    ayuda: ['Ayuda', I.ayuda, () => clic($('bHelp')), null, 'a'],
+    mas: ['Más', I.mas, () => clic($('bMas')), null, 'a'],
+  };
+  // Lo principal de cada modo (6). El resto, en «Ver todas».
+  const POR_MODO = {
+    cuerpo: ['medir', 'maniqui', 'plomada', 'anatomia', 'calcar', 'simetria'],
+    torso: ['medir', 'puntos', 'simetria', 'anatomia', 'ropa', 'calcar'],
+    rostro: ['medir', 'calcar', 'facciones', 'simetria', 'orejas', 'cabello'],
+    manos: ['medir', 'calcar', 'compas', 'regla', 'anatomia', 'espejo'],
+    piernas: ['medir', 'plomada', 'compas', 'anatomia', 'armazon', 'calcar'],
+    animal: ['especie', 'medir', 'calcar', 'plomada', 'compas', 'simetria'],
+    relieve: ['tipoRel', 'profundidad', 'medir', 'calcar', 'plomada', 'anatomia'],
+  };
+  const TODAS = ['medir', 'maniqui', 'plomada', 'espejo', 'calcar', 'simetria', 'anatomia', 'armazon', 'cabello', 'ropa', 'compas', 'regla', 'comparar', 'limpio', 'camara', 'girar', 'ajustar', 'consejos', 'ayuda', 'mas'];
   const herr = document.createElement('div'); herr.id = 'herr';
-  herr.innerHTML = `<h3>${ic(I.consejo)}Herramientas de MUSA<button id="hCerrar" aria-label="Cerrar">${ic(I.cerrar)}</button></h3>
-    <div class="hgrid">${H.map(([id, t, d]) => `<button id="${id}">${ic(d)}<span>${t}</span></button>`).join('')}</div>
-    <h4>PARA ESTE MODO</h4><div id="hQuick"></div>`;
+  herr.innerHTML = `<h3>${ic(I.consejo)}<span>Herramientas <small id="hModo"></small></span><button id="hCerrar" aria-label="Cerrar">${ic(I.cerrar)}</button></h3>
+    <div class="hgrid" id="hPrin"></div>
+    <div id="hSub"></div>
+    <button id="hTodas">Ver todas las herramientas <span>→</span></button>
+    <div class="hgrid" id="hTodasGrid"></div>`;
   stage.appendChild(herr);
-  for (const [id, , , fn] of H) $(id).onclick = () => { const mantener = /hMedir|hEspejo|hPlomada|hManiqui|hSim/.test(id); fn(); if (!mantener) cerrarHerr(); setTimeout(pintarEstado, 60); };
-  function abrirHerr() { document.body.classList.add('herrOn'); moverQuick(); pintarEstado(); }
-  function cerrarHerr() { document.body.classList.remove('herrOn'); }
+  let verTodas = false, subAbierto = null;
+  function boton(id) {
+    const t = T[id]; if (!t) return '';
+    return `<button data-t="${id}">${ic(t[1])}<span>${t[0]}</span></button>`;
+  }
+  function pintarHerr() {
+    const lista = POR_MODO[S.modo] || POR_MODO.cuerpo;
+    $('hModo').textContent = '· ' + ((MO.MODOS && MO.MODOS[S.modo]) || '');
+    $('hPrin').innerHTML = lista.map(boton).join('');
+    $('hTodasGrid').innerHTML = TODAS.filter(k => !lista.includes(k)).map(boton).join('');
+    $('hTodasGrid').style.display = verTodas ? '' : 'none';
+    $('hTodas').innerHTML = verTodas ? 'Ver menos <span>↑</span>' : 'Ver todas las herramientas <span>→</span>';
+    herr.querySelectorAll('[data-t]').forEach(b => b.onclick = () => usar(b.dataset.t));
+    if (subAbierto && !lista.includes(subAbierto)) cerrarSub();
+    estadosHerr();
+  }
+  function estadosHerr() {
+    herr.querySelectorAll('[data-t]').forEach(b => { const t = T[b.dataset.t]; if (!t) return; const src = t[3] && t[3](); b.classList.toggle('on', (t[4] === 't' && activo(src)) || subAbierto === b.dataset.t); });
+  }
+  // opciones de una herramienta (p. ej. Ropa ▸ pollera, poncho…): solo aparecen al elegirla
+  function abrirSub(id) {
+    const t = T[id], orig = $(t[2]), box = $('hSub');
+    if (subAbierto === id) { cerrarSub(); return; }
+    if (!orig) { box.innerHTML = '<p class="note">Esta opción aún no está disponible en este modo.</p>'; subAbierto = id; estadosHerr(); return; }
+    subAbierto = id;
+    box.innerHTML = `<label>${t[0]}</label>`;
+    const sel = document.createElement('select'); sel.innerHTML = orig.innerHTML; sel.value = orig.value;
+    sel.onchange = () => { orig.value = sel.value; orig.dispatchEvent(new Event('change', { bubbles: true })); if (typeof orig.onchange === 'function') { /* ya disparado por el evento */ } };
+    box.appendChild(sel); box.classList.add('on'); estadosHerr();
+  }
+  function cerrarSub() { subAbierto = null; $('hSub').innerHTML = ''; $('hSub').classList.remove('on'); estadosHerr(); }
+  function usar(id) {
+    const t = T[id]; if (!t) return;
+    if (t[4] === 's') return abrirSub(id);
+    t[2]();
+    if (t[4] === 'a') cerrarHerr();
+    setTimeout(() => { estadosHerr(); pintarEstado(); }, 80);
+  }
+  $('hTodas').onclick = () => { verTodas = !verTodas; pintarHerr(); };
+  function abrirHerr() { pintarHerr(); document.body.classList.add('herrOn'); pintarEstado(); }
+  function cerrarHerr() { document.body.classList.remove('herrOn'); cerrarSub(); verTodas = false; }
   $('dHerr').onclick = () => document.body.classList.contains('herrOn') ? cerrarHerr() : abrirHerr();
   $('hCerrar').onclick = cerrarHerr;
-  // los accesos del modo (expresión, ropa, especie, relieve…) viven dentro del panel
-  function moverQuick() {
-    const q = $('quick'), dest = $('hQuick'); if (!q) return;
-    if (q.parentElement !== dest) dest.appendChild(q);
-    dest.previousElementSibling.classList.toggle('vacio', !q.children.length);
-  }
-  moverQuick();
+  document.querySelectorAll('#modos [data-m]').forEach(b => b.addEventListener('click', () => setTimeout(() => { if (document.body.classList.contains('herrOn')) pintarHerr(); }, 60)));
+  setInterval(() => { if (document.body.classList.contains('herrOn')) estadosHerr(); }, 700);
+
+  // ---- correcciones como bandeja deslizable ----
+  const fondo = document.createElement('div'); fondo.id = 'corrFondo'; stage.appendChild(fondo);
+  fondo.onclick = () => $('corr').classList.add('min');
+  const obsCorr = () => document.body.classList.toggle('corrOn', !$('corr').classList.contains('min') && window.innerWidth < 1000);
+  new MutationObserver(obsCorr).observe($('corr'), { attributes: true, attributeFilter: ['class'] }); obsCorr();
 
   // ---- Consejos en una hoja ----
   const sc = document.createElement('div'); sc.className = 'sheet'; sc.id = 'sCons';
@@ -186,5 +307,5 @@
   $('cv').addEventListener('pointerdown', () => { $('views').classList.remove('abierto'); });
   setInterval(pintarEstado, 500); pintarEstado();
   window.dispatchEvent(new Event('resize'));
-  window.Interfaz = { abrirHerr, cerrarHerr };
+  window.Interfaz = { abrirHerr, cerrarHerr, POR_MODO, T };
 })();
