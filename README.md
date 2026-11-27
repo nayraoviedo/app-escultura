@@ -14,6 +14,9 @@ Funciona en Chrome de Android y en computadora. **No necesita servidor**: todo s
 
 ---
 
+
+> Resumen de decisiones, estado y pendientes del proyecto: [`MEMORIA.md`](MEMORIA.md).
+
 ## Pantalla
 Al abrir MUSA ves sobre todo **la cámara**, la zona elegida arriba (Cuerpo, Torso, Rostro, Mano y brazo…) y un botón para desplegar herramientas.
 - **Barra de acciones** (flotante, sobre la imagen): Foto · Congelar · **Herramientas** (botón redondo central) · Referencia · Voz. La **navegación** de abajo (Inicio, Progreso, Referencias, Favoritos, Estadísticas) es una barra sólida aparte.
